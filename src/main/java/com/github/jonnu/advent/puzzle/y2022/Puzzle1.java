@@ -1,8 +1,6 @@
-package com.github.jonnu.advent.puzzle;
+package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.PriorityQueue;
@@ -11,6 +9,7 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.SneakyThrows;
@@ -24,7 +23,7 @@ public class Puzzle1 implements Puzzle {
     @Override
     @SneakyThrows
     public void solve() {
-        BufferedReader reader = resourceReader.read("puzzle1.txt");
+        BufferedReader reader = resourceReader.read("y2022/puzzle1.txt");
         String line = reader.readLine();
 
         PriorityQueue<Elf> elves = new PriorityQueue<>(Comparator.comparingInt(Elf::getCarriedCalories).reversed());

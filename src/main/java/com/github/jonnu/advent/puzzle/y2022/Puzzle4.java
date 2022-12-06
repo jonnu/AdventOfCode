@@ -1,9 +1,10 @@
-package com.github.jonnu.advent.puzzle;
+package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.SneakyThrows;
@@ -17,7 +18,7 @@ public class Puzzle4 implements Puzzle {
     @Override
     @SneakyThrows
     public void solve() {
-        BufferedReader reader = resourceReader.read("puzzle4.txt");
+        BufferedReader reader = resourceReader.read("y2022/puzzle4.txt");
         String line = reader.readLine();
 
         int fullyOverlappingAssignments = 0;

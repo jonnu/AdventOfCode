@@ -1,10 +1,11 @@
-package com.github.jonnu.advent.puzzle;
+package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
 import java.util.Arrays;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.SneakyThrows;
@@ -22,12 +23,12 @@ public class Puzzle6 implements Puzzle {
     @SneakyThrows
     public void solve() {
 
-        try (BufferedReader reader = resourceReader.read("puzzle6.txt")) {
+        try (BufferedReader reader = resourceReader.read("y2022/puzzle6.txt")) {
             final Result startOfPacketMarker = findMarkerWithinStream(reader, PACKET_MARKER_SIZE);
             System.out.println("Start-of-packet marker at position: " + startOfPacketMarker.getPosition() + " (" + startOfPacketMarker.getPayload() + ")");
         }
 
-        try (BufferedReader reader = resourceReader.read("puzzle6.txt")) {
+        try (BufferedReader reader = resourceReader.read("y2022/puzzle6.txt")) {
             final Result startOfMessageMarker = findMarkerWithinStream(reader, MESSAGE_MARKER_SIZE);
             System.out.println("Start-of-message marker at position: " + startOfMessageMarker.getPosition() + " (" + startOfMessageMarker.getPayload() + ")");
         }

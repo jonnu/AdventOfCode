@@ -1,4 +1,4 @@
-package com.github.jonnu.advent.puzzle;
+package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 
@@ -27,7 +28,7 @@ public class Puzzle5 implements Puzzle {
     @Override
     @SneakyThrows
     public void solve() {
-        BufferedReader reader = resourceReader.read("puzzle5.txt");
+        BufferedReader reader = resourceReader.read("y2022/puzzle5.txt");
         String line = reader.readLine();
 
         PuzzleReadState state = PuzzleReadState.BUILD_CRATES;

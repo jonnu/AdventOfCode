@@ -1,4 +1,4 @@
-package com.github.jonnu.advent.puzzle;
+package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
 import java.util.HashMap;
@@ -6,6 +6,7 @@ import java.util.Map;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import lombok.AllArgsConstructor;
@@ -109,7 +110,7 @@ public class Puzzle2 implements Puzzle {
     @SneakyThrows
     public void solve() {
 
-        BufferedReader reader = resourceReader.read("puzzle2.txt");
+        BufferedReader reader = resourceReader.read("y2022/puzzle2.txt");
         String line = reader.readLine();
 
         int score = 0;
