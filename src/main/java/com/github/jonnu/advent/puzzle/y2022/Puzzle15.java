@@ -11,6 +11,9 @@ import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
@@ -24,6 +27,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.Value;
+import org.checkerframework.common.value.qual.IntRange;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle15 implements Puzzle {
@@ -34,6 +38,82 @@ public class Puzzle15 implements Puzzle {
 
     private final Terrain terrain = new Terrain();
     private final ResourceReader resourceReader;
+
+    @Value
+    @Builder
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    private static class Point {
+        long x;
+        long y;
+
+        @Override
+        public String toString() {
+            return String.format("(%d,%d)", x, y);
+        }
+    }
+
+    @Value
+    @Builder
+    @AllArgsConstructor
+    private static class Line {
+
+        Point a;
+        Point b;
+
+        public boolean intersects(final Line other) {
+            return intersects(this, other);
+        }
+
+        public Point intersection(final Line other) {
+            return intersection(this, other);
+        }
+
+        // statics
+        public static boolean boundsIntersects(final Line a, final Line b) {
+            final Point atl = new Point(Math.min(a.getA().getX(), a.getB().getX()), Math.min(a.getA().getY(), a.getB().getY()));
+            final Point abr = new Point(Math.max(a.getA().getX(), a.getB().getX()), Math.max(a.getA().getY(), a.getB().getY()));
+            final Point btl = new Point(Math.min(b.getA().getX(), b.getB().getX()), Math.min(b.getA().getY(), b.getB().getY()));
+            final Point bbr = new Point(Math.max(b.getA().getX(), a.getB().getX()), Math.max(b.getA().getY(), b.getB().getY()));
+
+            return atl.getX() <= bbr.getX() &&
+                    abr.getX() >= btl.getX() &&
+                    atl.getY() <= bbr.getY() &&
+                    abr.getY() >= btl.getY();
+        }
+
+        public static boolean intersects(final Line a, final Line b) {
+            if (!boundsIntersects(a, b)) {
+                return false;
+            }
+
+            final Point deltaX = new Point(a.getA().getX() - a.getB().getX(), b.getA().getX() - b.getB().getX());
+            final Point deltaY = new Point(a.getA().getY() - a.getB().getY(), b.getA().getY() - b.getB().getY());
+            return crossProduct(deltaX, deltaY) != 0;
+        }
+
+        public static Point intersection(final Line a, final Line b) {
+            long a1 = a.getB().getY() - a.getA().getY();
+            long b1 = a.getA().getX() - a.getB().getX();
+            long c1 = a1 * (a.getA().getX()) + b1 * (a.getA().getY());
+
+            long a2 = b.getB().getY() - b.getA().getY();
+            long b2 = b.getA().getX() - b.getB().getX();
+            long c2 = a2 * (b.getA().getX()) + b2 * (b.getA().getY());
+
+            final long determinant = crossProduct(new Point(a1, a2), new Point(b1, b2));
+            if (determinant == 0) {
+                throw new RuntimeException("Lines do not intersect");
+            }
+
+            return new Point((b2 * c1 - b1 * c2) / determinant, (a1 * c2 - a2 * c1) / determinant);
+        }
+
+        private static long crossProduct(final Point a, final Point b) {
+            return a.getX() * b.getY() - a.getY() * b.getX();
+        }
+    }
+
 
     @Override
     @SneakyThrows
@@ -54,25 +134,47 @@ public class Puzzle15 implements Puzzle {
             }
         }
 
-        int row = 2_000_000;
-        ArrayList<int[]> e = new ArrayList<>();
-        sensors.forEach(s -> {
+        //Line a = new Line(new Point(-10, 0), new Point(10, 0));
+        //Line b = new Line(new Point(5, 10), new Point(5, -10));
+        //System.out.println("Intersects: " + Line.intersects(a, b));
+        //System.out.println("Intersection: " + Line.intersection(a, b));
 
-            if (Math.abs(row - s.getPosition().getY()) <= s.getPosition().getDistance()) {
-                int[] b = new int[] {
-                        s.getPosition().getX() - (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
-                        s.getPosition().getX() + (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
-                };
-                e.add(b);
+        Set<Long> imposs = new HashSet<>();
+        //List<Sensor> sensors1 = List.of(Sensor.builder().build());
+        //int level = 2_000_000;
+        int level = 10;
+        for (Sensor sensor : sensors) {
+
+            if (!(sensor.position.y - sensor.position.distance <= level && level <= sensor.position.y + sensor.position.distance)) {
+                continue;
             }
 
-        });
+            long[] intersects = sensor.onLev(level);
+            //System.out.println(sensor + " " + sensor.getPosition().getDistance() + " = Intersections: " + intersects[0] + ", " + intersects[1]);
+            imposs.addAll(LongStream.rangeClosed(intersects[0], intersects[1]).boxed().collect(Collectors.toSet()));
+        }
 
+        Set<Long> beacons = sensors.stream().map(Sensor::getClosestBeacon).map(TerrainObject::getPosition).filter(position -> position.getY() == level).mapToLong(Coordinate::getX).boxed().collect(Collectors.toSet());
+        imposs.removeAll(beacons);
+        //System.out.println(imposs.stream().sorted().collect(Collectors.toList()));
 
-        int total = e.stream().map(a -> a[1] - a[0] + 1).reduce(0, Integer::sum);
-        total -= sensors.stream().map(x -> x.getClosestBeacon().getPosition().getY()).filter(i -> i == row).count();
-
-        System.out.println("Total: " + total);
+//        sensors.forEach(s -> {
+//
+//            if (Math.abs(row - s.getPosition().getY()) <= s.getPosition().getDistance()) {
+//                int[] b = new int[] {
+//                        s.getPosition().getX() - (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
+//                        s.getPosition().getX() + (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
+//                };
+//                e.add(b);
+//            }
+//
+//        });
+//
+//
+//        int total = e.stream().map(a -> a[1] - a[0] + 1).reduce(0, Integer::sum);
+//        total -= sensors.stream().map(x -> x.getClosestBeacon().getPosition().getY()).filter(i -> i == row).count();
+//
+//        System.out.println("Total: " + total);
 
         //sensors.forEach(System.out::println);
 
@@ -81,17 +183,8 @@ public class Puzzle15 implements Puzzle {
 
         //long beaconlessPositions = terrain.getEmptyCellsInRow(10);
         //long beaconlessPositions = terrain.getEmptyCellsInRow(2_000_000);
-        long beaconlessPositions = 0L;
+        long beaconlessPositions = imposs.size();
         System.out.println("Positions that cannot contain a beacon: " + beaconlessPositions);
-    }
-
-    private List<int[]> overlaps(int[] segs) {
-
-        for (int i = 0; i < segs.length; i++) {
-            //if (segs[0])
-        }
-
-
     }
 
     @Builder
@@ -214,6 +307,28 @@ public class Puzzle15 implements Puzzle {
 
         Coordinate position;
         TerrainObject closestBeacon;
+
+        public long[] onLev(final int level) {
+
+            Point pointy = new Point(position.getX(), level < position.getY() ? position.getY() - position.getDistance() : position.getY() + position.getDistance());
+            Point left = new Point(position.getX() - position.getDistance(), position.getY());
+            Point right = new Point(position.getX() + position.getDistance(), position.getY());
+
+            Line leftLine = new Line(left, pointy);
+            Line rightLine = new Line(right, pointy);
+            Line levelLine = new Line(new Point(position.getX() - position.getDistance(), level), new Point(position.getX() + position.getDistance(), level));
+
+            Point leftIntersection = Line.intersection(leftLine, levelLine);
+            Point rightIntersection = Line.intersection(rightLine, levelLine);
+
+//            System.out.println("Point: " + pointy);
+//            System.out.println("Left: " + left);
+//            System.out.println("Right: " + right);
+//            System.out.println("Left Inter: " + leftIntersection);
+//            System.out.println("Right Inter: " + rightIntersection);
+
+            return new long[] { leftIntersection.getX(), rightIntersection.getX() };
+        }
 
         public static Sensor createFromMatch(final Matcher matcher) {
 
