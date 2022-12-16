@@ -12,7 +12,6 @@ import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import javax.inject.Inject;
 
@@ -27,13 +26,12 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.Value;
-import org.checkerframework.common.value.qual.IntRange;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle15 implements Puzzle {
 
     private static final Pattern PATTERN = Pattern.compile("^.*?x=(?<sx>-?\\d+),\\sy=(?<sy>-?\\d+):.*?x=(?<bx>-?\\d+),\\sy=(?<by>-?\\d+)$");
-    private static final BiFunction<Coordinate, Coordinate, Integer> MANHATTAN_DISTANCE = (current, next) ->
+    private static final BiFunction<Coordinate, Coordinate, Long> MANHATTAN_DISTANCE = (current, next) ->
             Math.abs(current.getX() - next.getX()) + Math.abs(current.getY() - next.getY());
 
     private final Terrain terrain = new Terrain();
@@ -49,7 +47,7 @@ public class Puzzle15 implements Puzzle {
 
         @Override
         public String toString() {
-            return String.format("(%d,%d)", x, y);
+            return String.format("(%d, %d)", x, y);
         }
     }
 
@@ -141,16 +139,18 @@ public class Puzzle15 implements Puzzle {
 
         Set<Long> imposs = new HashSet<>();
         //List<Sensor> sensors1 = List.of(Sensor.builder().build());
-        //int level = 2_000_000;
-        int level = 10;
+        int level = 2_000_000;
+        //int level = 10;
         for (Sensor sensor : sensors) {
 
-            if (!(sensor.position.y - sensor.position.distance <= level && level <= sensor.position.y + sensor.position.distance)) {
+            if (!(sensor.getPosition().getY() - sensor.getPosition().getDistance() <= level &&
+                    level <= sensor.getPosition().getY() + sensor.getPosition().getDistance())) {
+                System.out.println("Skipping sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Too far away from " + level);
                 continue;
             }
 
             long[] intersects = sensor.onLev(level);
-            //System.out.println(sensor + " " + sensor.getPosition().getDistance() + " = Intersections: " + intersects[0] + ", " + intersects[1]);
+            System.out.println("Sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Intersects at: " + intersects[0] + ", " + intersects[1]);
             imposs.addAll(LongStream.rangeClosed(intersects[0], intersects[1]).boxed().collect(Collectors.toSet()));
         }
 
@@ -196,18 +196,18 @@ public class Puzzle15 implements Puzzle {
         private static final String UNKNOWN = ".";
 
         private final Set<Sensor> sensorLocations = new HashSet<>();
-        private final TreeMap<Integer, TreeMap<Integer, String>> terrain = new TreeMap<>();
+        private final TreeMap<Long, TreeMap<Long, String>> terrain = new TreeMap<>();
 
         // profiler.
-        private int ay;// = Integer.MAX_VALUE;
-        private int by;// = Integer.MIN_VALUE;
-        private int ax;// = Integer.MAX_VALUE;
-        private int bx;// = Integer.MIN_VALUE;
+        private long ay;// = Integer.MAX_VALUE;
+        private long by;// = Integer.MIN_VALUE;
+        private long ax;// = Integer.MAX_VALUE;
+        private long bx;// = Integer.MIN_VALUE;
 
         public void render() {
 
-            for (int y = ay; y <= by; y++) {
-                for (int x = ax; x <= bx; x++) {
+            for (long y = ay; y <= by; y++) {
+                for (long x = ax; x <= bx; x++) {
                     System.out.printf("%s", getTerrainAt(x, y));
                 }
                 System.out.printf("%n");
@@ -254,13 +254,13 @@ public class Puzzle15 implements Puzzle {
 
             ay = terrain.firstKey();
             by = terrain.lastKey();
-            ax = terrain.values().stream().mapToInt(TreeMap::firstKey).min().orElse(0);
-            bx = terrain.values().stream().mapToInt(TreeMap::lastKey).max().orElse(0);
+            ax = terrain.values().stream().mapToLong(TreeMap::firstKey).min().orElse(0);
+            bx = terrain.values().stream().mapToLong(TreeMap::lastKey).max().orElse(0);
 
             //System.out.println("New dims: (" + ax + ", " + ay + ") to (" + bx + ", " + by + ")");
         }
 
-        public long getEmptyCellsInRow(final int row) {
+        public long getEmptyCellsInRow(final long row) {
             System.out.println(terrain.getOrDefault(row, new TreeMap<>())
                     .values());
             return terrain.getOrDefault(row, new TreeMap<>())
@@ -270,20 +270,20 @@ public class Puzzle15 implements Puzzle {
                     .count();
         }
 
-        private void addTerrainObject(final int x, final int y, final String object) {
+        private void addTerrainObject(final long x, final long y, final String object) {
             terrain.computeIfAbsent(y, l -> new TreeMap<>());
             terrain.get(y).put(x, object);
         }
 
-        private void addTerrainObject(final int x, final int y, final TerrainObject object) {
+        private void addTerrainObject(final long x, final long y, final TerrainObject object) {
             addTerrainObject(x, y, object.getRepresentation());
         }
 
-        private String getTerrainAt(final int x, final int y) {
+        private String getTerrainAt(final long x, final long y) {
             return terrain.getOrDefault(y, new TreeMap<>()).getOrDefault(x, UNKNOWN);
         }
 
-        private boolean isWithinTerrainBoundary(final int x, final int y) {
+        private boolean isWithinTerrainBoundary(final long x, final long y) {
             return x >= ax && x <= bx && y >= ay && y <= by;
         }
     }
@@ -308,18 +308,25 @@ public class Puzzle15 implements Puzzle {
         Coordinate position;
         TerrainObject closestBeacon;
 
-        public long[] onLev(final int level) {
+        public long[] onLev(final long level) {
+
+            System.out.println("my position: " + position + " distance: " + position.getDistance());
 
             Point pointy = new Point(position.getX(), level < position.getY() ? position.getY() - position.getDistance() : position.getY() + position.getDistance());
             Point left = new Point(position.getX() - position.getDistance(), position.getY());
             Point right = new Point(position.getX() + position.getDistance(), position.getY());
 
+            System.out.println("Left: " + left + "; Right: " + right + "; Point: " + pointy);
+
             Line leftLine = new Line(left, pointy);
-            Line rightLine = new Line(right, pointy);
+            Line rightLine = new Line(pointy, right);//, pointy);
             Line levelLine = new Line(new Point(position.getX() - position.getDistance(), level), new Point(position.getX() + position.getDistance(), level));
 
             Point leftIntersection = Line.intersection(leftLine, levelLine);
             Point rightIntersection = Line.intersection(rightLine, levelLine);
+
+            System.out.println("Left intersection: " + leftIntersection);
+            System.out.println("Right intersection: " + rightIntersection);
 
 //            System.out.println("Point: " + pointy);
 //            System.out.println("Left: " + left);
@@ -341,13 +348,13 @@ public class Puzzle15 implements Puzzle {
 //                    .y(Integer.parseInt(matcher.group(BEACON_Y)))
 //                    .build();
             final Coordinate sensorCoordinate = new Coordinate(
-                    Integer.parseInt(matcher.group(SENSOR_X)),
-                    Integer.parseInt(matcher.group(SENSOR_Y))
+                    Long.parseLong(matcher.group(SENSOR_X)),
+                    Long.parseLong(matcher.group(SENSOR_Y))
             );
 
             final Coordinate beaconCoordinate = new Coordinate(
-                    Integer.parseInt(matcher.group(BEACON_X)),
-                    Integer.parseInt(matcher.group(BEACON_Y))
+                    Long.parseLong(matcher.group(BEACON_X)),
+                    Long.parseLong(matcher.group(BEACON_Y))
             );
 
             sensorCoordinate.setDistance(MANHATTAN_DISTANCE.apply(sensorCoordinate, beaconCoordinate));
@@ -386,9 +393,11 @@ public class Puzzle15 implements Puzzle {
     @RequiredArgsConstructor
     private static class Coordinate {
 
-        private final int x;
-        private final int y;
-        @EqualsAndHashCode.Exclude private int distance;
+//        private final int x;
+//        private final int y;
+        private final long x;
+        private final long y;
+        @EqualsAndHashCode.Exclude private long distance;
 //        @EqualsAndHashCode.Exclude private Coordinate[] adjacent;
 
 //        Coordinate(int x, int y) {
@@ -425,7 +434,7 @@ public class Puzzle15 implements Puzzle {
 
         @Override
         public String toString() {
-            return "(" + x + "," + y + ")";
+            return "(" + x + ", " + y + ")";
         }
 
         public Set<Coordinate> getAdjacentCoordinates() {
