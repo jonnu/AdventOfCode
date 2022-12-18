@@ -1,8 +1,12 @@
 package com.github.jonnu.advent.puzzle.y2022;
 
+import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
 import java.io.BufferedReader;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
@@ -12,7 +16,9 @@ import java.util.function.BiFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
@@ -33,6 +39,8 @@ public class Puzzle15 implements Puzzle {
     private static final Pattern PATTERN = Pattern.compile("^.*?x=(?<sx>-?\\d+),\\sy=(?<sy>-?\\d+):.*?x=(?<bx>-?\\d+),\\sy=(?<by>-?\\d+)$");
     private static final BiFunction<Coordinate, Coordinate, Long> MANHATTAN_DISTANCE = (current, next) ->
             Math.abs(current.getX() - next.getX()) + Math.abs(current.getY() - next.getY());
+    private static final BiFunction<Point, Point, Long> POINT_MANHATTAN_DISTANCE = (current, next) ->
+            Math.abs(current.getX() - next.getX()) + Math.abs(current.getY() - next.getY());
 
     private final Terrain terrain = new Terrain();
     private final ResourceReader resourceReader;
@@ -40,14 +48,15 @@ public class Puzzle15 implements Puzzle {
     @Value
     @Builder
     @EqualsAndHashCode
+    @NoArgsConstructor
     @AllArgsConstructor
     private static class Point {
-        long x;
-        long y;
+        @Builder.Default long x = 0;
+        @Builder.Default long y = 0;
 
         @Override
         public String toString() {
-            return String.format("(%d, %d)", x, y);
+            return String.format("(x: %d, y: %d)", x, y);
         }
     }
 
@@ -87,7 +96,31 @@ public class Puzzle15 implements Puzzle {
 
             final Point deltaX = new Point(a.getA().getX() - a.getB().getX(), b.getA().getX() - b.getB().getX());
             final Point deltaY = new Point(a.getA().getY() - a.getB().getY(), b.getA().getY() - b.getB().getY());
-            return crossProduct(deltaX, deltaY) != 0;
+            return determinant(deltaX, deltaY) != 0;
+        }
+
+        public static Point intersection3(final Line a, final Line b) {
+
+            long p0_x = a.getA().getX();
+            long p0_y = a.getA().getY();
+//            long p1_x = a.getB().getX();
+//            long p1_y = a.getB().getY();
+            long p2_x = b.getA().getX();
+            long p2_y = b.getA().getY();
+
+            long s1_x = a.getB().getX() - a.getA().getX();
+            long s2_x = b.getB().getX() - b.getA().getX();
+            long s1_y = a.getB().getY() - a.getA().getY();
+            long s2_y = b.getB().getY() - b.getA().getY();
+
+            long s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+            long t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+            if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+                return new Point(p0_x + (t * s1_x), p0_y + (t * s1_y));
+            }
+
+            throw new RuntimeException("No intersection");
         }
 
         public static Point intersection(final Line a, final Line b) {
@@ -99,7 +132,8 @@ public class Puzzle15 implements Puzzle {
             long b2 = b.getA().getX() - b.getB().getX();
             long c2 = a2 * (b.getA().getX()) + b2 * (b.getA().getY());
 
-            final long determinant = crossProduct(new Point(a1, a2), new Point(b1, b2));
+            final long determinant = determinant(new Point(a1, a2), new Point(b1, b2));
+            System.out.println("Using determinant: " + determinant);
             if (determinant == 0) {
                 throw new RuntimeException("Lines do not intersect");
             }
@@ -107,7 +141,27 @@ public class Puzzle15 implements Puzzle {
             return new Point((b2 * c1 - b1 * c2) / determinant, (a1 * c2 - a2 * c1) / determinant);
         }
 
-        private static long crossProduct(final Point a, final Point b) {
+        public static Point intersection2(final Line a, final Line b) {
+
+            Point l = new Point(a.getA().getX() - a.getB().getX(), a.getA().getY() - a.getB().getY());
+            Point r = new Point(b.getA().getX() - b.getB().getX(), b.getA().getY() - b.getB().getY());
+
+            long d0 = determinant(l, r);
+            if (d0 == 0) {
+                throw new RuntimeException("not intersecting");
+            }
+
+            long d1 = determinant(a.getA(), a.getB());
+            long d2 = determinant(b.getA(), b.getB());
+            long x = determinant(new Point(d1, a.getA().getX() - a.getB().getX()),
+                                 new Point(d2, b.getA().getX() - b.getB().getX())) / d0;
+            long y = determinant(new Point(d1, a.getA().getY() - a.getB().getY()),
+                                 new Point(d2, b.getA().getY() - b.getB().getY())) / d0;
+
+            return new Point(x, y);
+        }
+
+        private static long determinant(final Point a, final Point b) {
             return a.getX() * b.getY() - a.getY() * b.getX();
         }
     }
@@ -137,54 +191,48 @@ public class Puzzle15 implements Puzzle {
         //System.out.println("Intersects: " + Line.intersects(a, b));
         //System.out.println("Intersection: " + Line.intersection(a, b));
 
-        Set<Long> imposs = new HashSet<>();
         //List<Sensor> sensors1 = List.of(Sensor.builder().build());
-        int level = 2_000_000;
+
         //int level = 10;
-        for (Sensor sensor : sensors) {
-
-            if (!(sensor.getPosition().getY() - sensor.getPosition().getDistance() <= level &&
-                    level <= sensor.getPosition().getY() + sensor.getPosition().getDistance())) {
-                System.out.println("Skipping sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Too far away from " + level);
-                continue;
-            }
-
-            long[] intersects = sensor.onLev(level);
-            System.out.println("Sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Intersects at: " + intersects[0] + ", " + intersects[1]);
-            imposs.addAll(LongStream.rangeClosed(intersects[0], intersects[1]).boxed().collect(Collectors.toSet()));
-        }
-
-        Set<Long> beacons = sensors.stream().map(Sensor::getClosestBeacon).map(TerrainObject::getPosition).filter(position -> position.getY() == level).mapToLong(Coordinate::getX).boxed().collect(Collectors.toSet());
-        imposs.removeAll(beacons);
-        //System.out.println(imposs.stream().sorted().collect(Collectors.toList()));
-
-//        sensors.forEach(s -> {
+//        for (Sensor sensor : sensors) {
 //
-//            if (Math.abs(row - s.getPosition().getY()) <= s.getPosition().getDistance()) {
-//                int[] b = new int[] {
-//                        s.getPosition().getX() - (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
-//                        s.getPosition().getX() + (s.getPosition().getDistance() - Math.abs(row - s.getPosition().getY())),
-//                };
-//                e.add(b);
+//            if (!(sensor.getPoint().getY() - sensor.getDistance() <= level &&
+//                    level <= sensor.getPoint().getY() + sensor.getDistance())) {
+//                //System.out.println("Skipping sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Too far away from " + level);
+//                continue;
 //            }
 //
-//        });
-//
-//
-//        int total = e.stream().map(a -> a[1] - a[0] + 1).reduce(0, Integer::sum);
-//        total -= sensors.stream().map(x -> x.getClosestBeacon().getPosition().getY()).filter(i -> i == row).count();
-//
-//        System.out.println("Total: " + total);
+//            long[] intersects = sensor.onLev(level);
+//            //System.out.println("Sensor at " + sensor.getPosition() + " (distance: " + sensor.getPosition().getDistance() + "): Intersects at: " + intersects[0] + ", " + intersects[1]);
+//            imposs.addAll(LongStream.rangeClosed(intersects[0], intersects[1]).boxed().collect(Collectors.toSet()));
+//        }
 
-        //sensors.forEach(System.out::println);
+//        my position: (1003362, 1946094) manhattan distance: 1586508
+//        Left Point: (-583146, 1946094); Right Point: (2589870, 1946094); Apex Point: (1003362, 3532602)
+//        Left Line: Puzzle15.Line(a=(-583146, 1946094), b=(1003362, 3532602))
+//        Right Line: Puzzle15.Line(a=(1003362, 3532602), b=(2589870, 1946094))
+//        Level Line: Puzzle15.Line(a=(-583147, 2000000), b=(2589871, 2000000))
+//        Left intersection: (-529240, -1664417)
+//        Right intersection: (-1128453, -1664417)
 
-        //terrain.floodFill();
-        //terrain.render();
+        int level = 2_000_000;
+        Set<Integer> allXs = sensors.stream()
+                .map(x -> x.atRow(level))
+                .map(Collection::stream)
+                .reduce(Stream::concat)
+                .orElseGet(Stream::empty)
+                .collect(Collectors.toSet());
 
-        //long beaconlessPositions = terrain.getEmptyCellsInRow(10);
-        //long beaconlessPositions = terrain.getEmptyCellsInRow(2_000_000);
-        long beaconlessPositions = imposs.size();
-        System.out.println("Positions that cannot contain a beacon: " + beaconlessPositions);
+        Set<Integer> beacons = sensors.stream()
+                .map(Sensor::getBeacon)
+                .filter(position -> position.getY() == level)
+                .map(Point::getX)
+                .mapToInt(Long::intValue)
+                .boxed()
+                .collect(Collectors.toSet());
+
+        allXs.removeAll(beacons);
+        System.out.println("Positions at y: " + level + " that cannot contain a beacon: " + allXs.size());
     }
 
     @Builder
@@ -308,25 +356,60 @@ public class Puzzle15 implements Puzzle {
         Coordinate position;
         TerrainObject closestBeacon;
 
+        Point point;
+        Point beacon;
+        long distance;
+
+        public Set<Integer> atRow(int row) {
+            long reach = distance - Math.abs(row - point.getY());
+            if (reach <= 0) {
+                return Collections.emptySet();
+            }
+            long len = 2 *  (reach + 1) - 1;
+            return IntStream.range((int) (point.getX() - reach), (int) (point.getX() - reach + len)).boxed().collect(Collectors.toSet());
+        }
+
         public long[] onLev(final long level) {
 
-            System.out.println("my position: " + position + " distance: " + position.getDistance());
+            //long distance = position.getDistance();
+            System.out.println("my position: " + point + " manhattan distance: " + distance);
 
-            Point pointy = new Point(position.getX(), level < position.getY() ? position.getY() - position.getDistance() : position.getY() + position.getDistance());
-            Point left = new Point(position.getX() - position.getDistance(), position.getY());
-            Point right = new Point(position.getX() + position.getDistance(), position.getY());
+            // make a triangle based on this point.
 
-            System.out.println("Left: " + left + "; Right: " + right + "; Point: " + pointy);
+            Point apex = new Point(point.getX(), level < point.getY() ? point.getY() - distance : point.getY() + distance);
+            Point left = new Point(point.getX() - distance, point.getY());
+            Point right = new Point(point.getX() + distance, point.getY());
 
-            Line leftLine = new Line(left, pointy);
-            Line rightLine = new Line(pointy, right);//, pointy);
-            Line levelLine = new Line(new Point(position.getX() - position.getDistance(), level), new Point(position.getX() + position.getDistance(), level));
+//            Point pointy = new Point(position.getX(), level < position.getY() ? position.getY() - position.getDistance() : position.getY() + position.getDistance());
+//            Point left = new Point(position.getX() - position.getDistance(), position.getY());
+//            Point right = new Point(position.getX() + position.getDistance(), position.getY());
+
+
+            assert left.getX() <= apex.getX() && apex.getX() <= right.getX();
+
+            Line leftLine = new Line(left, apex);
+            Line rightLine = new Line(apex, right);
+            Line levelLine = new Line(new Point(left.getX() - 1, level), new Point(right.getX() + 1, level));
+
+            System.out.println("Left : " + left);
+            System.out.println("Right: " + right);
+            System.out.println("Apex : " + apex);
+            System.out.printf("%n");
+
+            System.out.println("Left Line: " + leftLine);
+            System.out.println("Right Line: " + rightLine);
+            System.out.println("Level Line: " + levelLine);
 
             Point leftIntersection = Line.intersection(leftLine, levelLine);
             Point rightIntersection = Line.intersection(rightLine, levelLine);
+            Point leftIntersection2 = Line.intersection2(leftLine, levelLine);
+            Point rightIntersection2 = Line.intersection2(rightLine, levelLine);
+            Point leftIntersection3 = Line.intersection3(leftLine, levelLine);
+            Point rightIntersection3 = Line.intersection3(rightLine, levelLine);
 
-            System.out.println("Left intersection: " + leftIntersection);
-            System.out.println("Right intersection: " + rightIntersection);
+            System.out.println("Left intersection: " + leftIntersection + " - " + leftIntersection2 + " - " + leftIntersection3);
+            System.out.println("Right intersection: " + rightIntersection + " - " + rightIntersection2 + " - " + rightIntersection3);
+            System.out.println("");
 
 //            System.out.println("Point: " + pointy);
 //            System.out.println("Left: " + left);
@@ -334,7 +417,7 @@ public class Puzzle15 implements Puzzle {
 //            System.out.println("Left Inter: " + leftIntersection);
 //            System.out.println("Right Inter: " + rightIntersection);
 
-            return new long[] { leftIntersection.getX(), rightIntersection.getX() };
+            return new long[] { leftIntersection2.getX(), rightIntersection2.getX() };
         }
 
         public static Sensor createFromMatch(final Matcher matcher) {
@@ -359,11 +442,23 @@ public class Puzzle15 implements Puzzle {
 
             sensorCoordinate.setDistance(MANHATTAN_DISTANCE.apply(sensorCoordinate, beaconCoordinate));
 
+            Point sp = Point.builder()
+                    .x(Integer.parseInt(matcher.group(SENSOR_X)))
+                    .y(Integer.parseInt(matcher.group(SENSOR_Y)))
+                    .build();
+            Point bp = Point.builder()
+                    .x(Integer.parseInt(matcher.group(BEACON_X)))
+                    .y(Integer.parseInt(matcher.group(BEACON_Y)))
+                    .build();
+
             return Sensor.builder()
                     .position(sensorCoordinate)
                     .closestBeacon(Beacon.builder()
                             .position(beaconCoordinate)
                             .build())
+                    .point(sp)
+                    .beacon(bp)
+                    .distance(POINT_MANHATTAN_DISTANCE.apply(sp, bp))
                     .build();
         }
 
