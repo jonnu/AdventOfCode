@@ -3,6 +3,7 @@ package com.github.jonnu.advent.puzzle.y2022;
 import com.github.jonnu.advent.common.ResourceReader;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -32,8 +34,9 @@ import java.util.stream.IntStream;
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle17 implements Puzzle {
 
+    private static final int ROCKS_2_DROP = 2800;
     private static final int SATISFYING_DROPPED_ROCKS = 2022;
-    private static final long ELEPHANT_SATISFYING_DROPPED_ROCKS = 2022;//_000L;//_000_000L;
+    private static final long ELEPHANT_SATISFYING_DROPPED_ROCKS = 1_000_000_000_000L;
 
     private static final int CHAMBER_HEIGHT = 4;
 
@@ -120,8 +123,8 @@ public class Puzzle17 implements Puzzle {
         private static final String ROCK_RESTING = "####";
 
         private final ArrayList<ArrayList<Cell>> chamber;
-        private final Iterator<Rock.Type> rockTypeIterator;
-        private final Iterator<Jet> airJetPattern;
+        private final CountableIterator<Rock.Type> rockTypeIterator;
+        private final CountableIterator<Jet> airJetPattern;
         @Getter private final Map<String, List<CacheObject>> cache = new HashMap<>();
 
         private int width = 7;
@@ -131,8 +134,10 @@ public class Puzzle17 implements Puzzle {
         private Rock current;
 
         private boolean active;
+        private final List<Long> heightCache = new ArrayList<>();
 
-        Chamber(final Iterator<Rock.Type> rockTypeIterator, final Iterator<Jet> airJetPattern) {
+        //Chamber(final Iterator<Rock.Type> rockTypeIterator, final Iterator<Jet> airJetPattern) {
+        Chamber(final CountableIterator<Rock.Type> rockTypeIterator, final CountableIterator<Jet> airJetPattern) {
 
             this.airJetPattern = airJetPattern;
             this.rockTypeIterator = rockTypeIterator;
@@ -278,6 +283,7 @@ public class Puzzle17 implements Puzzle {
                             .orElse(0);
 
                     fallenRocks++;
+                    heightCache.add(highestRock);
                     //System.out.println("Tower height is now: " + highestRock + " after " + fallenRocks++ + " solidified rocks.");
 
                     current = null;
@@ -305,6 +311,7 @@ public class Puzzle17 implements Puzzle {
 
             return heightMap.values().stream().mapToLong(x -> getRockTowerHeight() - x - 1).toArray();
         }
+
         public boolean step() {
 
             boolean shouldCache = false;
@@ -319,9 +326,11 @@ public class Puzzle17 implements Puzzle {
 
             if (shouldCache) {
                 String cacheKey = String.format("%s.%s.%s",
-                        Arrays.stream(keys()).boxed().map(String::valueOf).collect(Collectors.joining(".")),
-                        jet.getSymbol(),
-                        current.getType().name());
+                        airJetPattern.getIndex(),
+                        rockTypeIterator.getIndex(),
+                        Arrays.stream(keys()).boxed().map(String::valueOf).collect(Collectors.joining(",")));
+//                        jet.getSymbol(),
+//                        current.getType().name());
                 cache.putIfAbsent(cacheKey, new ArrayList<>());
                 cache.get(cacheKey).add(CacheObject.builder()
                         .counter(getFallenRocks())
@@ -337,7 +346,7 @@ public class Puzzle17 implements Puzzle {
             tryMoveRock(current, Jet.DOWN);
 
             //SATISFYING_DROPPED_ROCKS
-            if (fallenRocks == ELEPHANT_SATISFYING_DROPPED_ROCKS) {
+            if (fallenRocks == ROCKS_2_DROP) {
                 active = false;
             }
 
@@ -383,7 +392,8 @@ public class Puzzle17 implements Puzzle {
                     .map(Jet::fromSymbol)
                     .collect(Collectors.toList());
 
-            final Chamber chamber = new Chamber(Iterables.cycle(Rock.ALL).iterator(), Iterables.cycle(jets).iterator());
+            //final Chamber chamber = new Chamber(Iterables.cycle(Rock.ALL).iterator(), Iterables.cycle(jets).iterator());
+            final Chamber chamber = new Chamber(countingCyclicIterator(Rock.ALL), countingCyclicIterator(jets));
 
 
             while (chamber.step()) {
@@ -393,13 +403,76 @@ public class Puzzle17 implements Puzzle {
             //chamber.render();
 
             // (cycle_start, highest_start), cycle_size, height_per_cycle
-            List<CacheObject> cache = chamber.getCache().values().stream().filter(e -> e.size() > 1).findFirst().orElseThrow(() -> new IllegalArgumentException("No cycle"));
-            System.out.println(cache);
+            List<CacheObject> cache = chamber.getCache().values().stream().filter(e -> e.size() > 1).skip(1).findFirst().orElseThrow(() -> new IllegalArgumentException("No cycle"));
+            //chamber.getHeightCache().forEach(System.out::println);
 
-            //Arrays.stream(chamber.keys()).forEach(System.out::println);
+            // (cycle_start, highest_start), cycle_size, height_per_cycle
+            //return cycles[0], cycles[1][0] - cycles[0][0], cycles[1][1] - cycles[0][1]
 
-            System.out.println("END: " + chamber.getRockTowerHeight());
+            long cycleStart = cache.get(0).getCounter();
+            long result = chamber.getHeightCache().get((int) cycleStart);
+
+            long cycleSize = cache.get(1).getCounter() - cache.get(0).getCounter();
+            long heightPerCycle = cache.get(1).getHeight() - cache.get(0).getHeight();
+
+            long cycleNumber = Math.floorMod(ELEPHANT_SATISFYING_DROPPED_ROCKS - cycleStart, cycleSize);
+            long rest = (ELEPHANT_SATISFYING_DROPPED_ROCKS - cycleStart) % cycleSize;
+
+            result += cycleNumber * heightPerCycle + (chamber.getHeightCache().get((int) (cycleStart + rest)) - chamber.getHeightCache().get((int) cycleStart));
+
+            System.out.println("p1: " + chamber.getHeightCache().get(SATISFYING_DROPPED_ROCKS - 1));//chamber.getRockTowerHeight());
+            System.out.println("p2: " + result);
         }
+    }
+
+    interface CountableIterator<T> extends Iterator<T> {
+        int getIndex();
+    }
+
+    public static <T extends Object> CountableIterator<T> countingCyclicIterator(final Iterable<T> iterable) {
+        return new CountableIterator<T>() {
+
+            int index = -1;
+            Iterator<T> iterator = new Iterator<T>() {
+                @Override
+                public boolean hasNext() {
+                    return false;
+                }
+
+                @Override
+                public T next() {
+                    throw new NoSuchElementException();
+                }
+            };
+
+            public int getIndex() {
+                return index;
+            }
+
+            @Override
+            public boolean hasNext() {
+                return iterator.hasNext() || iterable.iterator().hasNext();
+            }
+
+            @Override
+            public T next() {
+                if (!iterator.hasNext()) {
+                    iterator = iterable.iterator();
+                    index = -1;
+                    if (!iterator.hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+                }
+                T next = iterator.next();
+                index++;
+                return next;
+            }
+
+            @Override
+            public void remove() {
+                iterator.remove();
+            }
+        };
     }
 
     @Getter
@@ -473,5 +546,7 @@ public class Puzzle17 implements Puzzle {
                     .orElseThrow(() -> new IllegalArgumentException("Unknown jet direction: " + symbol));
         }
     }
+
+
 
 }
