@@ -84,6 +84,35 @@ public class Puzzle20 implements Puzzle {
             return nodes;
         }
 
+        public Node<T> remove(final Node<T> node) {
+
+            if (node.equals(head)) {
+                head = node.getNext();
+            }
+
+            if (node.equals(tail)) {
+                tail = node.getPrev();
+            }
+
+            if (node.getPrev() != null && node.getNext() != null) {
+                node.getPrev().setNext(node.getNext());
+            }
+
+            this.size--;
+            return node.getPrev();
+        }
+
+        public Node<T> insert(final Node<T> node) {
+
+            if (head == null) {
+                head = node;
+                tail = node;
+            }
+
+            this.size++;
+            return node;
+        }
+
         public void move(final Node<T> node, int positions) {
             // walk to node.
             Node<T> destination = head;
@@ -104,6 +133,11 @@ public class Puzzle20 implements Puzzle {
                 //System.out.println(i+1 + "; " + destination.getValue());
             }
 
+            if (positions == 0) {
+                System.out.println("0 does not move");
+                return;
+            }
+
 
             // move
             Node<T> fromCopy = from.clone();
@@ -113,8 +147,21 @@ public class Puzzle20 implements Puzzle {
             }
 
             if (positions > 0) {
-                //System.out.println(from.getValue() + " moves between " + destination.getValue() + " and " + destination.getNext().getValue());//Moving from: " + from + " to destination: " + destination);
 
+                Node<T> betweenLeft = destination;
+                Node<T> betweenRight = destination.equals(tail) ? null : destination.getNext();
+
+                if (from.equals(betweenLeft)) {
+                    System.out.println("No point moving as I land back where I start");
+                    return;
+                }
+
+                System.out.println("from: " + from);
+                System.out.println("between: " + betweenLeft);
+
+                //System.out.println(from.getValue() + " moves between " +
+                //        destination.getValue() + " and " +
+                //        destination.getNext().getValue());//Moving from: " + from + " to destination: " + destination);
                 if (fromCopy.getPrev() != null) {
                     from.getPrev().setNext(from.getNext());
                 }
@@ -122,7 +169,12 @@ public class Puzzle20 implements Puzzle {
                 from.getNext().setPrev(from.getPrev());
 
                 from.setNext(destination.getNext());        //           B -> C
-                destination.getNext().setPrev(from);        //           B <- C
+
+                if (!betweenLeft.equals(tail)) {
+                    destination.getNext().setPrev(from);        //           B <- C
+                } else {
+                    tail = from;
+                }
                 from.setPrev(destination);                  //      A <- B
                 destination.setNext(from);                  //      A -> B
             }
@@ -136,6 +188,11 @@ public class Puzzle20 implements Puzzle {
                 Node<T> betweenLeft = destination.equals(head) ? tail : destination.getPrev();
                 Node<T> betweenRight = destination;
                 //System.out.println("<-- Moving: " + from.getValue() + " between: " + betweenLeft.getValue() + " and " + betweenRight.getValue());
+
+                if (from.equals(betweenRight)) {
+                    System.out.println("No point moving as I land back where I start");
+                    return;
+                }
 
                 if (!from.equals(tail)) {
                     from.getNext().setPrev(from.getPrev());
@@ -160,9 +217,7 @@ public class Puzzle20 implements Puzzle {
 
             }
 
-            if (positions == 0) {
-                //System.out.println("0 does not move");
-            }
+
         }
 
 //        private Node<T> previous(final Node<T> node) {
