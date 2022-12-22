@@ -9,7 +9,7 @@ import com.google.inject.Injector;
 public class AdventRunner {
     public static void main(final String[] args) {
         Injector injector = Guice.createInjector(new AdventModule());
-        Puzzle puzzle = injector.getInstance(Puzzle10.class);
+        Puzzle puzzle = injector.getInstance(Puzzle16.class);
         puzzle.solve();
     }
 }
