@@ -1,13 +1,13 @@
 package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,7 +36,7 @@ public class Puzzle9 implements Puzzle {
             while (line != null) {
 
                 String[] chunks = line.split(" ");
-                Direction direction = Direction.fromCharacter(chunks[0]);
+                Direction direction = Direction.fromString(chunks[0]);
                 int distance = Integer.parseInt(chunks[1]);
 
                 for (int i = 0; i < distance; i++) {
@@ -70,8 +70,8 @@ public class Puzzle9 implements Puzzle {
         int y;
 
         public void move(final Direction direction) {
-            x += direction.getDelta()[0];
-            y += direction.getDelta()[1];
+            x += direction.getDelta().getX();
+            y += direction.getDelta().getY();
         }
 
         public void follow(final Point point) {
@@ -89,24 +89,5 @@ public class Puzzle9 implements Puzzle {
         }
     }
 
-    @Getter
-    @AllArgsConstructor
-    private enum Direction {
-
-        UP("U", new int[] { 0, 1 }),
-        RIGHT("R", new int[] { 1, 0 }),
-        DOWN("D", new int[] { 0, -1 }),
-        LEFT("L", new int[] { -1, 0 });
-
-        private final String character;
-        private final int[] delta;
-
-        public static Direction fromCharacter(final String input) {
-            return Arrays.stream(values())
-                    .filter(direction -> direction.getCharacter().equalsIgnoreCase(input))
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalArgumentException("Invalid direction: " + input));
-        }
-    }
 }
 

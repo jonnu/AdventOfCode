@@ -1,21 +1,30 @@
 package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.IntUnaryOperator;
+import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.puzzle.Puzzle;
+import com.google.common.collect.ImmutableMap;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.SneakyThrows;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle8 implements Puzzle {
+
+    private static final Map<Direction, GridTraversal> TRAVERSAL = ImmutableMap.<Direction, GridTraversal>builder()
+            .put(Direction.NORTH, new GridTraversal(y -> 0, true))
+            .put(Direction.SOUTH, new GridTraversal(y -> y.length, false))
+            .put(Direction.WEST, new GridTraversal(x -> 0, true))
+            .put(Direction.EAST, new GridTraversal(x -> x.length, false))
+            .build();
 
     private final ResourceReader resourceReader;
 
@@ -55,12 +64,11 @@ public class Puzzle8 implements Puzzle {
     }
 
     private static boolean isVisible(int[][] trees, int x, int y) {
-        return Arrays.stream(Direction.values())
-                .anyMatch(direction -> isVisible(trees, x, y, direction));
+        return Direction.cardinal().stream().anyMatch(direction -> isVisible(trees, x, y, direction));
     }
 
     private static int getScenicScore(int[][] trees, int x, int y) {
-        return Arrays.stream(Direction.values())
+        return Direction.cardinal().stream()
                 .map(direction -> getScenicScore(trees, x, y, direction))
                 .reduce(1, Math::multiplyExact);
     }
@@ -75,17 +83,17 @@ public class Puzzle8 implements Puzzle {
 
     private static <T> T walkMatrixAndCallback(final int[][] trees, final int x, final int y, final Direction direction, final Function<int[], T> callback) {
 
-        boolean isVertical = direction.equals(Direction.UP) || direction.equals(Direction.DOWN);
-        final IntUnaryOperator mappingOperator = isVertical ? i -> trees[i][x] : i -> trees[y][i];
-        final int end = direction.getFindLimitFunction().apply(trees);
-        final int start = isVertical ? y : x;
+        final GridTraversal traversal = TRAVERSAL.get(direction);
+        final IntUnaryOperator mappingOperator = direction.isVertical() ? i -> trees[i][x] : i -> trees[y][i];
+        final int end = traversal.findBoundary(trees);
+        final int start = direction.isVertical() ? y : x;
 
         IntStream stream = IntStream.range(Math.min(start, end), Math.max(start, end));
-        if (direction.isReverse()) {
+        if (traversal.shouldReverse()) {
             stream = stream.map(i -> Math.max(start, end) - i - 1);
         }
 
-        int[] ints = (direction.isReverse() ? Stream.concat(Stream.of(start), stream.boxed()) : stream.boxed())
+        int[] ints = (traversal.shouldReverse() ? Stream.concat(Stream.of(start), stream.boxed()) : stream.boxed())
                 .map(mappingOperator::applyAsInt)
                 .mapToInt(Integer::intValue)
                 .toArray();
@@ -127,17 +135,19 @@ public class Puzzle8 implements Puzzle {
         return score;
     }
 
-    @Getter
     @AllArgsConstructor
-    private enum Direction {
+    private static class GridTraversal {
 
-        UP(1, m -> 0, true),
-        DOWN(0, m -> m.length, false),
-        LEFT(0, m -> 0, true),
-        RIGHT(0, m -> m.length, false);
-
-        private final int delta;
-        private final Function<int[][], Integer> findLimitFunction;
+        private final ToIntFunction<int[][]> findBound;
         private final boolean reverse;
+
+        public int findBoundary(final int[][] input) {
+            return findBound.applyAsInt(input);
+        }
+
+        public boolean shouldReverse() {
+            return reverse;
+        }
     }
+
 }
