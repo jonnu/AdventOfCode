@@ -2,7 +2,6 @@ package com.github.jonnu.advent.puzzle.y2021;
 
 import java.io.BufferedReader;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,10 +15,10 @@ import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Direction;
+import com.github.jonnu.advent.common.geometry.Point;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.SneakyThrows;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
@@ -46,46 +45,46 @@ public class Puzzle11 implements Puzzle {
                 row++;
             }
 
-            // 100 steps.
-            Queue<Point> process = new ArrayDeque<>();
-
-            System.out.println("Before any steps:");
-            long flashCount = 0;
-
             int step = 0;
+            long flashCount = 0;
+            final Queue<Point> process = new ArrayDeque<>();
+
             while (!isSynchronised(octopuses)) {
 
                 step++;
 
-                // first, increment.
+                // Increment each octopus.
                 octopuses.forEach((p, v) -> octopuses.replace(p, v + 1));
 
-                // start flash sequence.
-                Set<Point> flashing = octopuses.entrySet().stream().filter(x -> x.getValue() > 9).map(Map.Entry::getKey).collect(Collectors.toSet());
-                Set<Point> flashed = new HashSet<>();
+                // Push all 'powered up' octopuses to a queue.
+                Set<Point> flashing = octopuses.entrySet()
+                        .stream()
+                        .filter(x -> x.getValue() > 9)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toSet());
                 process.addAll(flashing);
+                Set<Point> flashed = new HashSet<>();
 
                 while (!process.isEmpty()) {
 
-                    Point current = process.poll();
+                    final Point current = process.poll();
                     if (flashed.contains(current)) {
                         continue;
                     }
 
                     flashed.add(current);
 
-                    Set<Point> neighbours = Arrays.stream(Direction.values())
+                    Set<Point> neighbours = Direction.all()
+                            .stream()
                             .map(current::move)
                             .filter(p -> p.getX() >= 0 && p.getX() <= 9)
                             .filter(p -> p.getY() >= 0 && p.getY() <= 9)
                             .collect(Collectors.toSet());
 
-                    // Increment.
+                    // Increment all flashed neighbours.
                     neighbours.forEach(p -> octopuses.replace(p, octopuses.get(p) + 1));
 
-                    // Energy used. reset to 0.
-                    //octopuses.replace(current, 0);
-
+                    // Any neighbours that are now flashing must also be enqueued.
                     Set<Point> flashingNeighbours = neighbours.stream()
                             .filter(neighbour -> !flashed.contains(neighbour))
                             .filter(neighbour -> octopuses.get(neighbour) > 9)
@@ -94,7 +93,7 @@ public class Puzzle11 implements Puzzle {
                     process.addAll(flashingNeighbours);
                 }
 
-                // reset.
+                // Any flashed octopuses reset to 0.
                 flashed.forEach(p -> octopuses.replace(p, 0));
 
                 flashCount += flashed.size();
@@ -103,10 +102,9 @@ public class Puzzle11 implements Puzzle {
                     System.out.println("After step " + step + " (count: " + flashCount + ")");
                     draw(octopuses, flashed);
                 }
-
             }
 
-            System.out.println("In Sync after " + step);
+            System.out.println("Octopuses are in sync after " + step + " steps.");
             draw(octopuses);
         }
     }
@@ -115,11 +113,9 @@ public class Puzzle11 implements Puzzle {
         return octopuses.values().stream().distinct().count() == 1;
     }
 
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
     public static final String ANSI_RED = "\u001B[31m";
-    public static final String SET_PLAIN_TEXT = "\033[0;0m";
-    public static final String SET_BOLD_TEXT = "\033[0;1m";
+    public static final String ANSI_RESET = "\u001B[0m";
+
     private static void draw(final Map<Point, Integer> points) {
         draw(points, Collections.emptySet());
     }
@@ -134,39 +130,7 @@ public class Puzzle11 implements Puzzle {
             }
             System.out.printf("%n");
         }
-        System.out.printf("%n%n");
+        System.out.printf("%n");
     }
 
-    @Getter
-    @EqualsAndHashCode
-    @AllArgsConstructor
-    private static class Point {
-
-        int x;
-        int y;
-
-        public Point move(final Direction direction) {
-            return new Point(x + direction.getDelta()[0], y + direction.getDelta()[1]);
-        }
-
-        public String toString() {
-            return "(" + x + "," + y + ")";
-        }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private enum Direction {
-
-        NORTH(new int[] { 0, -1 }),
-        NORTHEAST(new int[] { 1, -1 }),
-        EAST(new int[] { 1, 0 }),
-        SOUTHEAST(new int[] { 1, 1 }),
-        SOUTH(new int[] { 0, 1 }),
-        SOUTHWEST(new int[] { -1, 1 }),
-        WEST(new int[] { -1, 0 }),
-        NORTHWEST(new int[] { -1, -1 });
-
-        private final int[] delta;
-    }
 }
