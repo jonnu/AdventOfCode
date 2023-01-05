@@ -1,16 +1,5 @@
 package com.github.jonnu.advent.puzzle.y2021;
 
-import com.github.jonnu.advent.common.ResourceReader;
-import com.github.jonnu.advent.puzzle.Puzzle;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import lombok.Value;
-
-import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,6 +13,16 @@ import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javax.inject.Inject;
+
+import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Point;
+import com.github.jonnu.advent.puzzle.Puzzle;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.SneakyThrows;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle5 implements Puzzle {
@@ -66,19 +65,6 @@ public class Puzzle5 implements Puzzle {
 
             System.out.println("Straight lines with two-point overlaps: " + straightOverlappingPoints);
             System.out.println("All lines with two-point overlaps: " + allOverlappingPoints);
-        }
-    }
-
-    @Value
-    @AllArgsConstructor
-    @EqualsAndHashCode
-    private static class Point {
-        int x;
-        int y;
-
-        @Override
-        public String toString() {
-            return "(" + x + "," + y + ")";
         }
     }
 
