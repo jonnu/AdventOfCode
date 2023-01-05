@@ -69,10 +69,8 @@ public class Puzzle10 implements Puzzle {
 
     private Result parse(final String line) {
         final Stack<String> stack = new Stack<>();
-        stack.push(Character.toString(line.charAt(0)));
 
-        for (int i = 1; i < line.length(); i++) {
-
+        for (int i = 0; i < line.length(); i++) {
             final String current = Character.toString(line.charAt(i));
 
             if (OPENERS.contains(current)) {
