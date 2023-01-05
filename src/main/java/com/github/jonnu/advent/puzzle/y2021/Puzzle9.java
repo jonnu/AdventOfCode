@@ -3,7 +3,6 @@ package com.github.jonnu.advent.puzzle.y2021;
 import java.io.BufferedReader;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,12 +18,10 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Point;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.SneakyThrows;
-import lombok.Value;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle9 implements Puzzle {
@@ -56,7 +53,7 @@ public class Puzzle9 implements Puzzle {
 
             Set<Point> lowPoints = cave.entrySet().stream()
                     .filter(entry -> entry.getKey()
-                            .neighbours()
+                            .cardinalNeighbours()
                             .stream()
                             .filter(neighbour -> neighbour.getX() >= xStats.getMin() && neighbour.getX() <= xStats.getMax())
                             .filter(neighbour -> neighbour.getY() >= yStats.getMin() && neighbour.getY() <= yStats.getMax())
@@ -88,7 +85,8 @@ public class Puzzle9 implements Puzzle {
                     visited.add(point);
                     current.add(cave.get(point));
 
-                    point.neighbours().stream()
+                    point.cardinalNeighbours()
+                            .stream()
                             .filter(neighbour -> !visited.contains(neighbour))
                             .filter(neighbour -> neighbour.getX() >= xStats.getMin() && neighbour.getX() <= xStats.getMax())
                             .filter(neighbour -> neighbour.getY() >= yStats.getMin() && neighbour.getY() <= yStats.getMax())
@@ -108,38 +106,6 @@ public class Puzzle9 implements Puzzle {
             System.out.println("Sum of the risk levels of all low points: " + riskLevel);
             System.out.println("Multiple of three largest basins by size: " + basinSize);
         }
-    }
-
-    @Value
-    @AllArgsConstructor
-    @EqualsAndHashCode
-    private static class Point {
-
-        int x;
-        int y;
-
-        @Override
-        public String toString() {
-            return "(" + x + "," + y + ")";
-        }
-
-        public Set<Point> neighbours() {
-            return Arrays.stream(Direction.values())
-                    .map(direction -> new Point(x + direction.getDelta()[0], y + direction.getDelta()[1]))
-                    .collect(Collectors.toSet());
-        }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private enum Direction {
-
-        UP(new int[] { 0, -1 }),
-        RIGHT(new int[] { 1, 0 }),
-        DOWN(new int[] { 0, 1 }),
-        LEFT(new int[] { -1, 0 });
-
-        private int[] delta;
     }
 
 }

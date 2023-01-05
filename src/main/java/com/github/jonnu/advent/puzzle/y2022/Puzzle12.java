@@ -2,7 +2,6 @@ package com.github.jonnu.advent.puzzle.y2022;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -16,11 +15,11 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.Value;
@@ -105,23 +104,6 @@ public class Puzzle12 implements Puzzle {
                     .filter(x -> x > 0)
                     .reduce(smallest, Math::min);
             System.out.println("Smallest distance from " + twoStart + " to square with lowest elevation: " + shortestRouteTwo);
-        }
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private enum Direction {
-
-        UP('^', new int[] { 0, -1 }),
-        DOWN('v', new int[] { 0, 1 }),
-        LEFT('<', new int[] { -1, 0 }),
-        RIGHT('>', new int[] { 1, 0 });
-
-        char character;
-        int[] delta;
-
-        public static List<Direction> asList() {
-            return Arrays.stream(values()).collect(Collectors.toList());
         }
     }
 
@@ -270,13 +252,13 @@ public class Puzzle12 implements Puzzle {
 
         @Override
         protected Set<Coordinate<Character>> findNeighbours(final Coordinate<Character> node) {
-            return Direction.asList()
+            return Direction.cardinal()
                     .stream()
                     .map(direction -> {
 
                         // In-bounds check.
-                        int dx = node.getX() + direction.getDelta()[0];
-                        int dy = node.getY() + direction.getDelta()[1];
+                        int dx = node.getX() + direction.getDelta().getX();
+                        int dy = node.getY() + direction.getDelta().getY();
                         if (dy < 0 || dy >= graph.size() || dx < 0 || dx >= graph.get(dy).size()) {
                             return Optional.<Coordinate<Character>>empty();
                         }
