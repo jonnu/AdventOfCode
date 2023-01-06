@@ -122,7 +122,7 @@ public class Puzzle11 implements Puzzle {
 
     private static void draw(final Map<Point, Integer> points, final Set<Point> highlight) {
         final IntSummaryStatistics xStats = points.keySet().stream().mapToInt(Point::getX).summaryStatistics();
-        final IntSummaryStatistics yStats = points.keySet().stream().mapToInt(Point::getX).summaryStatistics();
+        final IntSummaryStatistics yStats = points.keySet().stream().mapToInt(Point::getY).summaryStatistics();
         for (int y = yStats.getMin(); y <= yStats.getMax(); y++) {
             for (int x = xStats.getMin(); x <= xStats.getMax(); x++) {
                 Point p = new Point(x, y);
