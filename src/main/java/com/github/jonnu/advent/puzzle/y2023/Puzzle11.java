@@ -1,43 +1,26 @@
 package com.github.jonnu.advent.puzzle.y2023;
 
+import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Point;
+import com.github.jonnu.advent.puzzle.Puzzle;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.Value;
+
+import javax.inject.Inject;
 import java.io.BufferedReader;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IntSummaryStatistics;
-import java.util.List;
-import java.util.LongSummaryStatistics;
-import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.LongStream;
-import javax.inject.Inject;
-
-import com.github.jonnu.advent.common.ResourceReader;
-//import com.github.jonnu.advent.common.geometry.Point;
-import com.github.jonnu.advent.puzzle.Puzzle;
-import com.github.jonnu.advent.puzzle.y2022.Puzzle15;
-import com.google.common.collect.ImmutableMap;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.SneakyThrows;
-import lombok.Value;
-import org.checkerframework.common.value.qual.IntRange;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle11 implements Puzzle {
 
     private static final int GALAXY = '#';
     private final ResourceReader resourceReader;
-
-    private static final BiFunction<Point, Point, Long> MANHATTAN_DISTANCE = (current, next) ->
-            Math.abs(current.getX() - next.getX()) + Math.abs(current.getY() - next.getY());
 
     @Override
     @SneakyThrows
@@ -58,40 +41,71 @@ public class Puzzle11 implements Puzzle {
                 row++;
             }
 
-            final LongSummaryStatistics xStats = galaxies.stream().mapToLong(Point::getX).summaryStatistics();
-            final LongSummaryStatistics yStats = galaxies.stream().mapToLong(Point::getY).summaryStatistics();
+            final int maxX = galaxies.stream()
+                    .mapToInt(Point::getX)
+                    .summaryStatistics()
+                    .getMax();
 
-            final Set<Long> colShift = LongStream.range(0, xStats.getMax()).filter(x -> galaxies.stream().noneMatch(g -> x == g.getX())).boxed().collect(Collectors.toSet());
-            final Set<Long> rowShift = LongStream.range(0, yStats.getMax()).filter(y -> galaxies.stream().noneMatch(g -> y == g.getY())).boxed().collect(Collectors.toSet());
+            final int maxY = galaxies.stream()
+                    .mapToInt(Point::getY)
+                    .summaryStatistics()
+                    .getMax();
 
-            Set<Point> shiftedGalaxies = galaxies.stream().map(g -> shift(colShift, rowShift, g, 1_000_000)).collect(Collectors.toSet());
+            final Set<Integer> colShift = IntStream.range(0, maxX)
+                    .filter(x -> galaxies.stream().noneMatch(g -> x == g.getX()))
+                    .boxed()
+                    .collect(Collectors.toSet());
 
-            //draw(shiftedGalaxies);
+            final Set<Integer> rowShift = IntStream.range(0, maxY)
+                    .filter(y -> galaxies.stream().noneMatch(g -> y == g.getY()))
+                    .boxed()
+                    .collect(Collectors.toSet());
 
-            Set<ShortestGalaxyPath> universe = new HashSet<>();
-            // shortest path calc.
-            shiftedGalaxies.forEach(galaxy -> {
-                universe.addAll(shiftedGalaxies.stream()
-                        .filter(g -> !g.equals(galaxy))
-                        .map(g -> ShortestGalaxyPath.builder()
-                                .a(galaxy)
-                                .b(g)
-                                .distance(MANHATTAN_DISTANCE.apply(g, galaxy))
-                                .build())
-                        .collect(Collectors.toSet()));
-            });
+            final long shortestPaths = shortestGalaxyPath(galaxies, rowShift, colShift, 1);
+            final long shortestPathsMillion = shortestGalaxyPath(galaxies, rowShift, colShift, 1_000_000);
 
-            System.out.println(universe.stream().mapToLong(ShortestGalaxyPath::getDistance).sum());
+            System.out.println("Sum of shortest paths: " + shortestPaths);
+            System.out.println("Sum of 10^6 shortest paths: " + shortestPathsMillion);
         }
     }
 
-    @Builder
+    private static long shortestGalaxyPath(final Set<Point> galaxies, final Set<Integer> rowShift, final Set<Integer> colShift, final int shiftFactor) {
+
+        final Set<Point> shifted = galaxies.stream()
+                .map(galaxy -> shift(colShift, rowShift, galaxy, shiftFactor))
+                .collect(Collectors.toSet());
+
+        return shifted.stream()
+                .flatMap(original -> shifted.stream()
+                        .filter(shift -> !shift.equals(original))
+                        .map(shift -> new ShortestGalaxyPath(original, shift)))
+                .distinct()
+                .mapToLong(ShortestGalaxyPath::getDistance)
+                .sum();
+    }
+
+    private static Point shift(final Collection<Integer> xShift, final Collection<Integer> yShift, final Point point, final int factor) {
+        return new Point(
+                point.getX() + (Math.max(1, (factor - 1)) * (int) xShift.stream().filter(i -> i < point.getX()).count()),
+                point.getY() + (Math.max(1, (factor - 1)) * (int) yShift.stream().filter(i -> i < point.getY()).count())
+        );
+    }
+
     @Value
     private static class ShortestGalaxyPath {
+
+        private static final BiFunction<Point, Point, Integer> MANHATTAN_DISTANCE = (current, next) ->
+                Math.abs(current.getX() - next.getX()) + Math.abs(current.getY() - next.getY());
 
         Point a;
         Point b;
         long distance;
+
+        ShortestGalaxyPath(Point a, Point b) {
+            this.a = a;
+            this.b = b;
+            distance = MANHATTAN_DISTANCE.apply(a, b);
+        }
 
         @Override
         public int hashCode() {
@@ -118,32 +132,4 @@ public class Puzzle11 implements Puzzle {
         }
     }
 
-
-    @AllArgsConstructor
-    @Builder
-    @Value
-    public static class Point {
-        long x;
-        long y;
-    }
-
-    private static Point shift(final Collection<Long> xshift, final Collection<Long> yshift, Point point, int factor) {
-        return new Point(
-                point.getX() + (Math.max(1, (factor - 1)) * xshift.stream().filter(i -> i < point.getX()).count()),
-                point.getY() + (Math.max(1, (factor - 1)) * yshift.stream().filter(i -> i < point.getY()).count())
-        );
-    }
-
-    private static void draw(final Set<Point> points) {
-        final LongSummaryStatistics xStats = points.stream().mapToLong(Point::getX).summaryStatistics();
-        final LongSummaryStatistics yStats = points.stream().mapToLong(Point::getY).summaryStatistics();
-        for (long y = yStats.getMin(); y <= yStats.getMax(); y++) {
-            for (long x = xStats.getMin(); x <= xStats.getMax(); x++) {
-                Point p = new Point(x, y);
-                System.out.printf("%s", points.contains(p) ? "#" : ".");
-            }
-            System.out.printf("%n");
-        }
-        System.out.printf("%n");
-    }
 }
