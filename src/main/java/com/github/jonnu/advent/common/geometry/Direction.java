@@ -20,6 +20,12 @@ public enum Direction {
     WEST("W", new Point(-1, 0)),
     NORTHWEST("NW", new Point(-1, -1));
 
+
+    public enum Rotation {
+        CLOCKWISE,
+        ANTICLOCKWISE
+    }
+
     @Getter
     @AllArgsConstructor
     private enum Alias {
@@ -49,6 +55,26 @@ public enum Direction {
 
     public boolean isHorizontal() {
         return delta.getY() == 0;
+    }
+
+    public Direction rotate(final Rotation rotation) {
+        switch (this) {
+            case NORTH -> {
+                return rotation.equals(Rotation.CLOCKWISE) ? EAST : WEST;
+            }
+            case EAST -> {
+                return rotation.equals(Rotation.CLOCKWISE) ? SOUTH : NORTH;
+            }
+            case SOUTH -> {
+                return rotation.equals(Rotation.CLOCKWISE) ? WEST : EAST;
+            }
+            case WEST -> {
+                return rotation.equals(Rotation.CLOCKWISE) ? NORTH : SOUTH;
+            }
+            default -> {
+                return this;
+            }
+        }
     }
 
     public static Set<Direction> all() {
