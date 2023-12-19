@@ -80,6 +80,10 @@ public class Puzzle13 implements Puzzle {
             return new Pattern(point, width, height);
         }
 
+        // @todo - create 2xMap<Integer, Integer> for rows and cols, with key
+        // being row/col number and value being number of 'mistakes'.
+        // need for part two, run simulation where mistakes == 1. for part one
+        // we can run where number of mistakes == 0.
         public int summarize() {
 
             // try verts.

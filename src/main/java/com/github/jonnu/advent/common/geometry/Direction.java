@@ -57,6 +57,7 @@ public enum Direction {
         return delta.getY() == 0;
     }
 
+    // todo - make this nicer.
     public Direction rotate(final Rotation rotation) {
         switch (this) {
             case NORTH -> {
@@ -75,6 +76,10 @@ public enum Direction {
                 return this;
             }
         }
+    }
+
+    public Direction opposite() {
+        return values()[(ordinal() + 4) % values().length];
     }
 
     public static Set<Direction> all() {
