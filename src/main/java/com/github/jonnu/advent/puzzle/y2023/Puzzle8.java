@@ -20,6 +20,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.github.jonnu.advent.common.math.Arithmetic.lcm;
+
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle8 implements Puzzle {
 
@@ -91,25 +93,6 @@ public class Puzzle8 implements Puzzle {
             current = "L".equals(direction) ? nodes.get(current).getLeft().getName() : nodes.get(current).getRight().getName();
             step++;
         }
-    }
-
-    // greatest common divisor
-    private static long gcd(long a, long b) {
-        return b == 0 ? a : gcd(b, a % b);
-    }
-
-    // lowest common multiple
-    private static long lcm(long a, long b) {
-        return a * (b / gcd(a, b));
-    }
-
-    // lcm amongst a set.
-    private static long lcm(final long[] input) {
-        long result = input[0];
-        for(int i = 1; i < input.length; i++) {
-            result = lcm(result, input[i]);
-        }
-        return result;
     }
 
     @Data

@@ -1,5 +1,17 @@
 package com.github.jonnu.advent.puzzle.y2023;
 
+import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.puzzle.Puzzle;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.ToString;
+import lombok.Value;
+import lombok.experimental.SuperBuilder;
+
+import javax.inject.Inject;
 import java.io.BufferedReader;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -8,22 +20,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.inject.Inject;
+import java.util.stream.IntStream;
 
-import com.github.jonnu.advent.common.ResourceReader;
-import com.github.jonnu.advent.puzzle.Puzzle;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.SneakyThrows;
-import lombok.ToString;
-import lombok.Value;
-import lombok.experimental.SuperBuilder;
+import static com.github.jonnu.advent.common.math.Arithmetic.lcm;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle20 implements Puzzle {
@@ -71,7 +74,18 @@ public class Puzzle20 implements Puzzle {
             }
 
             MACHINE.setModules(modules);
-            MACHINE.pressButton();
+
+            // Part 1
+            IntStream.range(0, 1_000).forEach(i -> MACHINE.pressButton());
+            System.out.println("Low and High pulses multiplied after 1,000 presses: " + MACHINE.getPulseValue());
+
+            // Part 2
+            long output = 0;
+            while (output == 0) {
+                output = MACHINE.pressButton();
+            }
+
+            System.out.println("Lowest number of presses until low-pulse sent to 'rx': " + output);
         }
     }
 
@@ -79,22 +93,85 @@ public class Puzzle20 implements Puzzle {
     @AllArgsConstructor
     private static class Machine {
 
+        private static final String SAND_MODULE = "rx";
         private static final String INITIAL_MODULE = "broadcaster";
 
-        EnumMap<Pulse, Integer> pulses;
-        @Setter Map<String, Module> modules;
+        private int cycle;
+        Map<String, Module> modules;
+        @Builder.Default Module module = BroadcastModule.BUTTON_BROADCAST_MODULE;
+        @Builder.Default EnumMap<Pulse, Long> pulses = new EnumMap<>(Pulse.class);
+        @Builder.Default Queue<PulseRequest> pulseQueue = new ArrayDeque<>();
+        @Builder.Default Map<String, Integer> conjunctionLowPulsed = new HashMap<>();
 
-        public void pressButton() {
-            System.out.printf("button -%s-> %s%n", Pulse.LOW.name().toLowerCase(), INITIAL_MODULE);
-            modules.get(INITIAL_MODULE).process(PulseRequest.builder()
+        public void setModules(final Map<String, Module> modules) {
+            // initialise all conjunction modules.
+            modules.values()
+                    .stream()
+                    .map(module -> module.getDestinations()
+                            .stream()
+                            .collect(Collectors.toMap(Function.identity(), e -> module.getName())))
+                    .flatMap(inverted -> inverted.entrySet().stream())
+                    .filter(entry -> modules.get(entry.getKey()) instanceof ConjunctionModule)
+                    .collect(Collectors.groupingBy(Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())))
+                    .forEach((conjunctor, callers) -> {
+                        if (modules.get(conjunctor).getDestinations().size() > 1) {
+                            conjunctionLowPulsed.put(conjunctor, 0);
+                        }
+                        ((ConjunctionModule) modules.get(conjunctor)).initialise(callers);
+                    });
+
+            this.modules = modules;
+        }
+
+        public long pressButton() {
+
+            cycle++;
+
+            module.process(PulseRequest.builder()
+                    .cycle(cycle)
                     .pulse(Pulse.LOW)
-                    .origin("button")
+                    .origin(module.getName())
                     .destination(INITIAL_MODULE)
                     .build());
+
+            return process();
+        }
+
+        public long record(PulseRequest request) {
+
+            pulses.putIfAbsent(request.getPulse(), 0L);
+            pulses.computeIfPresent(request.getPulse(), (pulse, value) -> value + 1);
+
+            conjunctionLowPulsed.computeIfPresent(request.getOrigin(), (k, v) -> Pulse.LOW.equals(request.getPulse()) ? request.getCycle() : v);
+            if (conjunctionLowPulsed.values().stream().allMatch(x -> x > 0)) {
+                return lcm(conjunctionLowPulsed.values().stream().mapToLong(x -> x).toArray());
+            }
+
+            return 0;
         }
 
         public Module getModule(final String module) {
-            return modules.get(module);
+            return modules.getOrDefault(module, SinkModule.builder().name(module).build());
+        }
+
+        public long getPulseValue() {
+            return pulses.values().stream().reduce(1L, Math::multiplyExact);
+        }
+
+        public void enqueue(final PulseRequest request) {
+            pulseQueue.add(request);
+        }
+
+        public long process() {
+            while (!pulseQueue.isEmpty()) {
+                PulseRequest request = pulseQueue.poll();
+                MACHINE.getModule(request.getDestination()).process(request);
+                long output = MACHINE.record(request);
+                if (output > 0) {
+                    return output;
+                }
+            }
+            return 0;
         }
     }
 
@@ -104,17 +181,43 @@ public class Puzzle20 implements Puzzle {
 
         protected String name;
         protected List<String> destinations;
-        @Builder.Default protected Queue<PulseRequest> calls = new ArrayDeque<>();
 
-        // pulse type, pulse from.
-        // number of pulses sent.
         abstract void process(PulseRequest request);
+    }
 
-        void pulse() {
-            while (!calls.isEmpty()) {
-                PulseRequest request = calls.poll();
-                MACHINE.getModule(request.getDestination()).process(request);
-            }
+    @SuperBuilder
+    @ToString(callSuper = true)
+    @EqualsAndHashCode(callSuper = true)
+    private static class SinkModule extends Module {
+
+        @Override
+        public void process(PulseRequest request) {
+            // no-op.
+        }
+    }
+
+
+    @SuperBuilder
+    @ToString(callSuper = true)
+    @EqualsAndHashCode(callSuper = true)
+    private static class BroadcastModule extends Module {
+
+        private static final BroadcastModule BUTTON_BROADCAST_MODULE = BroadcastModule.builder()
+                .name("button")
+                .destinations(List.of(Machine.INITIAL_MODULE))
+                .build();
+
+        @Override
+        public void process(PulseRequest request) {
+            getDestinations().forEach(destination -> {
+                PulseRequest outbound = PulseRequest.builder()
+                        .cycle(request.getCycle())
+                        .origin(getName())
+                        .destination(destination)
+                        .pulse(request.getPulse())
+                        .build();
+                MACHINE.enqueue(outbound);
+            });
         }
     }
 
@@ -128,7 +231,6 @@ public class Puzzle20 implements Puzzle {
         @Override
         public void process(PulseRequest request) {
 
-            // Ignore high pulses.
             if (Pulse.HIGH.equals(request.getPulse())) {
                 return;
             }
@@ -138,36 +240,13 @@ public class Puzzle20 implements Puzzle {
 
             getDestinations().forEach(destination -> {
                 PulseRequest outbound = PulseRequest.builder()
+                        .cycle(request.getCycle())
                         .origin(getName())
                         .destination(destination)
                         .pulse(outboundPulse)
                         .build();
-                System.out.printf("%s -%s-> %s%n", outbound.getOrigin(), outbound.getPulse().name().toLowerCase(), outbound.getDestination());
-                getCalls().add(outbound);
+                MACHINE.enqueue(outbound);
             });
-
-            pulse();
-        }
-    }
-
-    @SuperBuilder
-    @ToString(callSuper = true)
-    @EqualsAndHashCode(callSuper = true)
-    private static class BroadcastModule extends Module {
-
-        @Override
-        public void process(PulseRequest request) {
-            getDestinations().forEach(destination -> {
-                PulseRequest outbound = PulseRequest.builder()
-                        .origin(getName())
-                        .destination(destination)
-                        .pulse(request.getPulse())
-                        .build();
-                System.out.printf("%s -%s-> %s%n", outbound.getOrigin(), outbound.getPulse().name().toLowerCase(), outbound.getDestination());
-                getCalls().add(outbound);
-            });
-
-            pulse();
         }
     }
 
@@ -178,24 +257,25 @@ public class Puzzle20 implements Puzzle {
 
         @Builder.Default private Map<String, Pulse> lastPulse = new HashMap<>();
 
+        public void initialise(final List<String> callers) {
+            callers.forEach(caller -> lastPulse.put(caller, Pulse.LOW));
+        }
+
         @Override
         public void process(PulseRequest request) {
 
             lastPulse.put(request.getOrigin(), request.getPulse());
-
             Pulse outboundPulse = lastPulse.values().stream().allMatch(Pulse.HIGH::equals) ? Pulse.LOW : Pulse.HIGH;
 
             getDestinations().forEach(destination -> {
                 PulseRequest outbound = PulseRequest.builder()
+                        .cycle(request.getCycle())
                         .origin(getName())
                         .destination(destination)
                         .pulse(outboundPulse)
                         .build();
-                System.out.printf("%s -%s-> %s%n", request.getOrigin(), request.getPulse().name().toLowerCase(), request.getDestination());
-                getCalls().add(outbound);
+                MACHINE.enqueue(outbound);
             });
-
-            pulse();
         }
     }
 
@@ -203,6 +283,7 @@ public class Puzzle20 implements Puzzle {
     @Builder
     @AllArgsConstructor
     private static class PulseRequest {
+        int cycle;
         String origin;
         String destination;
         Pulse pulse;
