@@ -21,6 +21,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.Value;
+import lombok.experimental.Accessors;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
 public class Puzzle19 implements Puzzle {
@@ -49,7 +50,6 @@ public class Puzzle19 implements Puzzle {
 
                 if (parseWorkflows) {
 
-                    //px{a<2006:qkq,m>2090:A,rfg}
                     String name = line.substring(0, line.indexOf('{'));
                     String[] parts = line.substring(line.indexOf('{') + 1, line.length() - 1).split(",");
 
@@ -61,14 +61,6 @@ public class Puzzle19 implements Puzzle {
                         if (!matcher.matches()) {
                             throw new IllegalArgumentException("Invalid argument: " + part);
                         }
-
-                        for (int i = 0; i < matcher.groupCount(); i++) {
-                            //System.out.println(part + "(" + i + "/" + matcher.groupCount() + "): " + matcher.group(i));
-                        }
-
-                        //2/3/4 = pred
-                        //5=workflow
-                        //6=if A/R. else workflow.
 
                         if (IntStream.rangeClosed(2, 4).allMatch(i -> matcher.group(i) != null)) {
 
@@ -85,7 +77,7 @@ public class Puzzle19 implements Puzzle {
 
                         // pass thru result.
                         predicates.add(x -> WorkflowResult.builder()
-                                .outcome(true)
+                                .resolved(true)
                                 .destination(matcher.group(6))
                                 .build());
                     }
@@ -110,12 +102,6 @@ public class Puzzle19 implements Puzzle {
 
                 line = reader.readLine();
             }
-//
-//            System.out.println("Parts:");
-//            parts.forEach(System.out::println);
-//
-//            System.out.println("Workflows:");
-//            workflows.values().forEach(System.out::println);
 
             int total = 0;
             for (Part part: parts) {
@@ -126,7 +112,7 @@ public class Puzzle19 implements Puzzle {
                     Workflow wf = workflows.get(workflow);
 
                     WorkflowResult result = wf.evaluate(part);
-                    if (result.isOutcome()) {
+                    if (result.resolved()) {
                         if (result.isAccepted() || result.isRejected()) {
                             System.out.printf(" -> %s %n", result.getDestination());
                             complete = result.isAccepted();
@@ -143,7 +129,7 @@ public class Puzzle19 implements Puzzle {
                 }
             }
 
-            System.out.println("Total of rating numbers: " + total);
+            System.out.println("Total of accepted rating numbers: " + total);
         }
     }
 
@@ -155,21 +141,11 @@ public class Puzzle19 implements Puzzle {
         List<WorkflowPredicate> predicates;
 
         private WorkflowResult evaluate(final Part part) {
-
-            //System.out.println("Evaluating workflow:");
-            //predicates.forEach(System.out::println);
-
-            for (WorkflowPredicate predicate : predicates) {
-                //System.err.println(predicate);
-                WorkflowResult result = predicate.evaluate(part);
-                //System.out.println("Result: " + result);
-                if (result.isOutcome()) {
-                    //System.out.println("Outcome positive, move to: " + result.getDestination());
-                    return result;
-                }
-            }
-
-            return null;
+            return predicates.stream()
+                    .map(predicate -> predicate.evaluate(part))
+                    .filter(WorkflowResult::resolved)
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Unable to evaluate workflow: " + getName()));
         }
     }
 
@@ -188,12 +164,8 @@ public class Puzzle19 implements Puzzle {
 
         public WorkflowResult evaluate(final Part part) {
             boolean result = operator.getPredicate().test(part.get(type), value);
-
-//            System.out.println("");
-//            System.out.println("[" + type + "] " + part.get(type) + " " + operator.getOperator() + " " + value + " = " + result + " (" + destination + ")");
-//            System.out.println("");
             return WorkflowResult.builder()
-                    .outcome(result)
+                    .resolved(result)
                     .destination(result ? destination : null)
                     .build();
         }
@@ -203,7 +175,7 @@ public class Puzzle19 implements Puzzle {
     @Builder
     private static class WorkflowResult {
 
-        boolean outcome;
+        @Accessors(fluent = true) boolean resolved;
         String destination;
 
         public boolean isAccepted() {

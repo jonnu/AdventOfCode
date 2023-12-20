@@ -166,17 +166,31 @@ public class Puzzle5 implements Puzzle {
 
         public RangeIntersection intersection(final Range other) {
 
-            if (start > other.getEnd() || end < other.getStart()) {
-                return RangeIntersection.builder().build();
-            }
+            long e = Math.max(getStart(), other.getStart());
+            long f = Math.min(getEnd(), other.getEnd());
 
-            return RangeIntersection.builder()
-                    .intersects(true)
-                    .overlap(Range.builder()
-                            .start(Math.max(getStart(), other.getStart()))
-                            .end(Math.min(getEnd(), other.getEnd()))
-                            .build())
-                    .build();
+            if (e <= f) {
+                return RangeIntersection.builder()
+                        .intersects(true)
+                        .overlap(Range.builder()
+                                .start(e)
+                                .end(f)
+                                .build())
+                        .build();
+            }
+            else {
+                return RangeIntersection.builder()
+                        .intersects(false)
+                        .build();
+            }
+//
+//            return RangeIntersection.builder()
+//                    .intersects(true)
+//                    .overlap(Range.builder()
+//                            .start(Math.max(getStart(), other.getStart()))
+//                            .end(Math.min(getEnd(), other.getEnd()))
+//                            .build())
+//                    .build();
         }
     }
 

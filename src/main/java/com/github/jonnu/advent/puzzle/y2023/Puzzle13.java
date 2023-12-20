@@ -127,9 +127,6 @@ public class Puzzle13 implements Puzzle {
         }
 
         private boolean mirroredVertical(final int l, final int r) {
-            //System.out.println("vert L: " + l + " | " + coordinates(p -> p.getX() == l, Point::getY));
-            //System.out.println("vert R: " + r + " | " + coordinates(p -> p.getX() == r, Point::getY));
-            //System.out.println("vert =: " + coordinates(p -> p.getX() == l, Point::getY).equals(coordinates(p -> p.getX() == r, Point::getY)));
             return coordinates(p -> p.getX() == l, Point::getY).equals(coordinates(p -> p.getX() == r, Point::getY));
         }
 
