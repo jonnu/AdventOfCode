@@ -21,6 +21,7 @@ import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
+import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.common.geometry.Point;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +43,16 @@ public class Puzzle10 implements Puzzle {
             .put(Pipe.BEND_NE, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NW, Pipe.BEND_SE))
             .put(Pipe.BEND_NW, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NE, Pipe.BEND_SW, Pipe.BEND_SE))
             .build();
+
+    private static final Map<Pipe, Set<Direction>> CONNECTIONS = ImmutableMap.<Pipe, Set<Direction>>builder()
+            .put(Pipe.VERTICAL, Set.of(Direction.NORTH, Direction.SOUTH))
+            .put(Pipe.HORIZONTAL, Set.of(Direction.WEST, Direction.EAST))
+            .put(Pipe.BEND_SW, Set.of(Direction.SOUTH, Direction.WEST))
+            .put(Pipe.BEND_SE, Set.of(Direction.SOUTH, Direction.EAST))
+            .put(Pipe.BEND_NE, Set.of(Direction.NORTH, Direction.EAST))
+            .put(Pipe.BEND_NW, Set.of(Direction.NORTH, Direction.WEST))
+            .build();
+
     @Override
     @SneakyThrows
     public void solve() {
