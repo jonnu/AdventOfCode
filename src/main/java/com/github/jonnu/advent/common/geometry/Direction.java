@@ -58,6 +58,8 @@ public enum Direction {
     }
 
     // todo - make this nicer.
+    // todo - return values()[(ordinal() +- 2) % values().length];
+    // todo - +2 for 90d, +1 for 45d.
     public Direction rotate(final Rotation rotation) {
         switch (this) {
             case NORTH -> {

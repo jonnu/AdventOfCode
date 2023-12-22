@@ -79,6 +79,7 @@ public class Puzzle3 implements Puzzle {
                     .filter(component -> !Sets.intersection(component.getPoints()
                             .stream()
                             .flatMap(point -> point.neighbours()
+                                    .values()
                                     .stream()
                                     .filter(p -> withinBounds(p, 0, xMax, 0, yMax)))
                             .collect(Collectors.toSet()), symbols.keySet())
@@ -134,12 +135,6 @@ public class Puzzle3 implements Puzzle {
         }
     }
 
-    private static Set<Point> getAdjoining(Point needle, Set<Point> haystack) {
-        return haystack.stream()
-                .filter(point -> point.neighbours().contains(needle))
-                .collect(Collectors.toSet());
-    }
-
     private static boolean withinBounds(final Point point, int minX, int maxX, int minY, int maxY) {
         return point.getX() >= minX && point.getX() <= maxX && point.getY() >= minY && point.getY() <= maxY;
     }
@@ -151,7 +146,11 @@ public class Puzzle3 implements Puzzle {
         int value;
 
         public Set<Point> neighbours() {
-            return Stream.concat(points.stream(), points.stream().map(Point::neighbours).flatMap(Collection::stream)).collect(Collectors.toSet());
+            return Stream.concat(points.stream(), points.stream()
+                            .map(Point::neighbours)
+                            .map(Map::values)
+                            .flatMap(Collection::stream))
+                    .collect(Collectors.toSet());
         }
     }
 }

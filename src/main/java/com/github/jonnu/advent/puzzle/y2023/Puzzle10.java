@@ -1,11 +1,6 @@
 package com.github.jonnu.advent.puzzle.y2023;
 
 import java.io.BufferedReader;
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -13,11 +8,9 @@ import java.util.HashSet;
 import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import javax.inject.Inject;
 
 import com.github.jonnu.advent.common.ResourceReader;
@@ -33,16 +26,6 @@ import lombok.SneakyThrows;
 public class Puzzle10 implements Puzzle {
 
     private final ResourceReader resourceReader;
-
-    private static final Map<Pipe, Set<Pipe>> ALLOWED = ImmutableMap.<Pipe, Set<Pipe>>builder()
-            .put(Pipe.ANIMAL, Pipe.ALL)
-            .put(Pipe.VERTICAL, Pipe.ALL)
-            .put(Pipe.HORIZONTAL, Pipe.ALL)
-            .put(Pipe.BEND_SW, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NW, Pipe.BEND_SE))
-            .put(Pipe.BEND_SE, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NE, Pipe.BEND_SW))
-            .put(Pipe.BEND_NE, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NW, Pipe.BEND_SE))
-            .put(Pipe.BEND_NW, Set.of(Pipe.HORIZONTAL, Pipe.VERTICAL, Pipe.BEND_NE, Pipe.BEND_SW, Pipe.BEND_SE))
-            .build();
 
     private static final Map<Pipe, Set<Direction>> CONNECTIONS = ImmutableMap.<Pipe, Set<Direction>>builder()
             .put(Pipe.VERTICAL, Set.of(Direction.NORTH, Direction.SOUTH))
@@ -62,6 +45,7 @@ public class Puzzle10 implements Puzzle {
             String line = reader.readLine();
 
             Queue<Point> queue = new ArrayDeque<>();
+            Map<Point, Integer> processed = new HashMap<>();
 
             Map<Point, Pipe> grid = new HashMap<>();
             int y = 0;
@@ -74,6 +58,7 @@ public class Puzzle10 implements Puzzle {
 
                     if (pipe.equals(Pipe.ANIMAL)) {
                         queue.add(point);
+                        processed.put(point, 0);
                     }
                 }
 
@@ -81,56 +66,51 @@ public class Puzzle10 implements Puzzle {
                 y++;
             }
 
-            draw(grid, Set.of());
-
-            int steps = 1;
-            Set<Point> processed = new HashSet<>();
             while (!queue.isEmpty()) {
 
                 Point point = queue.poll();
-                Pipe current = grid.get(point);
-
 
                 List<Point> points = point.cardinalNeighbours()
+                        .entrySet()
                         .stream()
-                        // todo: need to evaluate the cardinal neighbors.
-                        // tuples of current pipe + direction = valid.
-                        // otherwise JF is valid (because they back onto each other) which isn't true.
-                        .filter(p -> current.valid().contains(grid.get(p)))
-                        .filter(p -> !processed.contains(p))
+                        // I can only go into another pipe...
+                        .filter(p -> Pipe.ALL.contains(grid.get(p.getValue())))
+                        // If I'm going EAST (for example), the pipe in the point to the EAST must have an opposite (i.e. WEST) connection.
+                        .filter(p -> CONNECTIONS.get(grid.get(p.getValue())).contains(p.getKey().opposite()))
+                        // ...and I don't want to re-evaluate nodes in a closed loop.
+                        .filter(p -> !processed.containsKey(p.getValue()))
+                        .map(Map.Entry::getValue)
                         .collect(Collectors.toList());
 
-                System.out.println("Processing " + current + " point: " + point + " (" + points + ")");
-                if (!points.isEmpty()) {
-                    steps++;
-                }
-
-                processed.add(point);
-
+                final int steps = processed.get(point) + 1;
                 points.forEach(p -> {
-//                    if (processed.contains(p)) {
-//                        return;
-//                    }
-                    System.out.println("  could go to " + p + " via " + grid.get(p));
+                    processed.put(p, steps);
                     queue.add(p);
-
                 });
-
             }
 
-            System.out.println(Math.floor(steps / 2));
+            final int farthestPointFromOrigin = processed.values()
+                    .stream()
+                    .mapToInt(i -> i)
+                    .max()
+                    .orElseThrow();
+
+            System.out.println("Steps taken to reach farthest point from origin: " + farthestPointFromOrigin);
+
+            draw(grid, Map.of());
+            draw(grid, processed);
         }
     }
 
     public static final String ANSI_RED = "\u001B[31m";
     public static final String ANSI_RESET = "\u001B[0m";
-    private static <T> void draw(final Map<Point, T> points, final Set<Point> highlight) {
+    private static <T, R> void draw(final Map<Point, T> points, final Map<Point, R> highlight) {
         final IntSummaryStatistics xStats = points.keySet().stream().mapToInt(Point::getX).summaryStatistics();
         final IntSummaryStatistics yStats = points.keySet().stream().mapToInt(Point::getY).summaryStatistics();
         for (int y = yStats.getMin(); y <= yStats.getMax(); y++) {
             for (int x = xStats.getMin(); x <= xStats.getMax(); x++) {
                 Point p = new Point(x, y);
-                System.out.printf("%s%s%s", highlight.contains(p) ? ANSI_RED : "", points.get(p), highlight.contains(p) ? ANSI_RESET : "");
+                System.out.printf("%s%s%s", highlight.containsKey(p) ? ANSI_RED : "", highlight.containsKey(p) ? highlight.get(p).toString().substring(highlight.get(p).toString().length() - 1) : points.get(p), highlight.containsKey(p) ? ANSI_RESET : "");
             }
             System.out.printf("%n");
         }
@@ -144,13 +124,12 @@ public class Puzzle10 implements Puzzle {
         GROUND(".", "."),
         ANIMAL("S", "s"),
 
-        // annoyingly box-drawing characters dont work in the ide.
-        VERTICAL("|", "\u2502"),
-        HORIZONTAL("-", "\u2500"),
-        BEND_NE("L", "\u2514"),
-        BEND_NW("J", "\u2518"),
-        BEND_SW("7", "\u2510"),
-        BEND_SE("F", "\u250C")
+        VERTICAL("|", "║"),
+        HORIZONTAL("-", "═"),
+        BEND_NE("L", "╚"),
+        BEND_NW("J", "╝"),
+        BEND_SW("7", "╗"),
+        BEND_SE("F", "╔")
         ;
 
         public static final Set<Pipe> ALL = Arrays.stream(Pipe.values())
@@ -162,16 +141,7 @@ public class Puzzle10 implements Puzzle {
 
         @Override
         public String toString() {
-            return getCharacter();
-        }
-
-        public Set<Pipe> valid() {
-            if (equals(Pipe.HORIZONTAL) || equals(Pipe.VERTICAL) || equals(Pipe.ANIMAL)) {
-                return ALL;
-            }
-            Set<Pipe> ret = new HashSet<>(ALL);
-            ret.remove(this);
-            return ret;
+            return getAlternative();
         }
 
         public static Pipe parse(final char input) {

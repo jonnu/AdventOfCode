@@ -71,11 +71,12 @@ public class Puzzle21 implements Puzzle {
                 final int nextStep = stepCount + 1;
                 visited.get(stepCount)
                         .forEach(current -> current.cardinalNeighbours()
-                            .stream()
-                            .filter(p -> !rocks.contains(p))
-                            .filter(p -> !visited.getOrDefault(nextStep, Collections.emptyList()).contains(p))
-                            .filter(p -> p.getX() >= 0 && p.getX() < gardenWidth && p.getY() >= 0 && p.getY() < gardenHeight)
-                            .forEach(point -> visited.computeIfAbsent(nextStep, k -> new ArrayList<>()).add(point)));
+                                .values()
+                                .stream()
+                                .filter(p -> !rocks.contains(p))
+                                .filter(p -> !visited.getOrDefault(nextStep, Collections.emptyList()).contains(p))
+                                .filter(p -> p.getX() >= 0 && p.getX() < gardenWidth && p.getY() >= 0 && p.getY() < gardenHeight)
+                                .forEach(point -> visited.computeIfAbsent(nextStep, k -> new ArrayList<>()).add(point)));
 
 
                 if (stepCount == mod) {
