@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
@@ -27,7 +28,11 @@ public class Puzzle10 implements Puzzle {
 
     private final ResourceReader resourceReader;
 
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_RESET = "\u001B[0m";
+
     private static final Map<Pipe, Set<Direction>> CONNECTIONS = ImmutableMap.<Pipe, Set<Direction>>builder()
+            .put(Pipe.ANIMAL, Direction.cardinal())
             .put(Pipe.VERTICAL, Set.of(Direction.NORTH, Direction.SOUTH))
             .put(Pipe.HORIZONTAL, Set.of(Direction.WEST, Direction.EAST))
             .put(Pipe.BEND_SW, Set.of(Direction.SOUTH, Direction.WEST))
@@ -66,6 +71,8 @@ public class Puzzle10 implements Puzzle {
                 y++;
             }
 
+            draw(grid, Map.of());
+
             while (!queue.isEmpty()) {
 
                 Point point = queue.poll();
@@ -75,8 +82,11 @@ public class Puzzle10 implements Puzzle {
                         .stream()
                         // I can only go into another pipe...
                         .filter(p -> Pipe.ALL.contains(grid.get(p.getValue())))
+                        // and the pipe I'm leaving must have a connection in that direction...
+                        .filter(p -> CONNECTIONS.get(grid.get(point)).contains(p.getKey()))
                         // If I'm going EAST (for example), the pipe in the point to the EAST must have an opposite (i.e. WEST) connection.
                         .filter(p -> CONNECTIONS.get(grid.get(p.getValue())).contains(p.getKey().opposite()))
+                        .peek(p -> System.out.println("I'm going from " + point + " (" + grid.get(point).getAlternative() + ") " + p.getKey() + " into " + p.getValue() + " (" + grid.get(p.getValue()).getAlternative() + ") [connections: " + CONNECTIONS.get(grid.get(p.getValue())) + "] [opposite: " + p.getKey().opposite() + "]"))
                         // ...and I don't want to re-evaluate nodes in a closed loop.
                         .filter(p -> !processed.containsKey(p.getValue()))
                         .map(Map.Entry::getValue)
@@ -95,15 +105,67 @@ public class Puzzle10 implements Puzzle {
                     .max()
                     .orElseThrow();
 
+            final IntSummaryStatistics xStats = grid.keySet().stream().mapToInt(Point::getX).summaryStatistics();
+            final IntSummaryStatistics yStats = grid.keySet().stream().mapToInt(Point::getY).summaryStatistics();
+
+            int numInside = 0;
+            boolean inside;
+            Pipe prev;
+            Pipe curr;
+            for (int b = yStats.getMin(); b <= yStats.getMax(); b++) {
+
+                inside = false;
+                prev = Pipe.GROUND;
+
+                for (int a = xStats.getMin(); a <= xStats.getMax(); a++) {
+
+                    Point point = new Point(a, b);
+                    if (!processed.containsKey(point)) {
+                        numInside += inside ? 1 : 0;
+                        System.out.printf("%s", inside ? "I" : "O");
+                        continue;
+                    }
+
+                    curr = grid.get(point);
+                    switch (curr) {
+                        case HORIZONTAL -> { System.out.print(grid.get(point).getAlternative()); continue; }
+                        case VERTICAL -> { inside ^= true; }
+                        default -> {
+                            switch (prev) {
+                                case BEND_NE, BEND_NW -> {
+                                    if (Set.of(Pipe.BEND_SE, Pipe.BEND_SW).contains(curr)) {
+                                        inside ^= true;
+                                    } else {
+                                        prev = curr;
+                                    }
+                                }
+                                case BEND_SE, BEND_SW -> {
+                                    if (Set.of(Pipe.BEND_NE, Pipe.BEND_NW).contains(curr)) {
+                                        inside ^= true;
+                                    } else {
+                                        prev = curr;
+                                    }
+                                }
+                                default -> prev = curr;
+                            }
+                        }
+                    }
+
+                    String out = processed.containsKey(point) ? grid.get(point).getAlternative() : inside ? "I" : "O";
+                    System.out.printf("%s", out);
+                }
+                System.out.printf("%n");
+            }
+            System.out.printf("%n");
+
             System.out.println("Steps taken to reach farthest point from origin: " + farthestPointFromOrigin);
+            System.out.println("Number of tiles enclosed by the loop: " + numInside);
 
             draw(grid, Map.of());
             draw(grid, processed);
         }
     }
 
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_RESET = "\u001B[0m";
     private static <T, R> void draw(final Map<Point, T> points, final Map<Point, R> highlight) {
         final IntSummaryStatistics xStats = points.keySet().stream().mapToInt(Point::getX).summaryStatistics();
         final IntSummaryStatistics yStats = points.keySet().stream().mapToInt(Point::getY).summaryStatistics();
