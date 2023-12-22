@@ -67,4 +67,3 @@ public class Puzzle25 implements Puzzle {
     }
 
 }
-
