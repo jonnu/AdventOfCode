@@ -1,6 +1,7 @@
 package com.github.jonnu.advent.puzzle.y2023;
 
 import java.io.BufferedReader;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -9,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -70,9 +72,9 @@ public class Puzzle5 implements Puzzle {
                 }
 
                 long[] parts = Arrays.stream(line.split("\\s+")).mapToLong(Long::valueOf).toArray();
-                long destinationStart = parts[0];
-                long sourceStart = parts[1];
-                long rangeLength = parts[2];
+                long destinationStart = parts[0]; // z
+                long sourceStart = parts[1]; // y1
+                long rangeLength = parts[2]; // dy
 
                 Range source = Range.builder()
                         .start(sourceStart)
@@ -97,27 +99,29 @@ public class Puzzle5 implements Puzzle {
             System.out.println("Lowest location: " + seeds.stream().mapToLong(this::locationForSeed).min().orElse(0L));
 
             System.out.println(seeds);
-            List<Range> ranges = IntStream.range(0, seeds.size() / 2)
+            Queue<Range> ranges = IntStream.range(0, seeds.size() / 2)
                     .mapToObj(i -> Range.builder()
                             .start(seeds.get(2 * i))
                             .end((seeds.get(2 * i) + seeds.get((2 * i) + 1)) - 1)
+                            .depth(1)
                             .build())
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toCollection(ArrayDeque::new));
 
-            Set<Long> seedr = ranges.stream()
-                    .map(range -> almanacs.get("seed-to-soil")
-                            .stream()
-                            //.peek(a -> System.out.println(a.getSource()))
-                            .map(a -> a.getSource().intersection(range))
-                            //.peek(System.out::println)
-                            .filter(RangeIntersection::isIntersects)
-                            .peek(x -> System.out.println("Range: " + x))
-                            .flatMap(x -> LongStream.rangeClosed(x.overlap.start, x.overlap.end).boxed())
-                            .collect(Collectors.toSet()))
-                    .flatMap(Collection::stream)
-                    .collect(Collectors.toSet());
+//            Set<Long> seedr = ranges.stream()
+//                    .map(range -> almanacs.get("seed-to-soil")
+//                            .stream()
+//                            //.peek(a -> System.out.println(a.getSource()))
+//                            .map(a -> a.getSource().intersection(range))
+//                            //.peek(System.out::println)
+//                            .filter(RangeIntersection::isIntersects)
+//                            .peek(x -> System.out.println("Range: " + x))
+//                            .flatMap(x -> LongStream.rangeClosed(x.overlap.start, x.overlap.end).boxed())
+//                            .collect(Collectors.toSet()))
+//                    .flatMap(Collection::stream)
+//                    .collect(Collectors.toSet());
 
-            System.out.println("Lowest location 2: " + seedr.stream().mapToLong(this::locationForSeed).min().orElse(0L));
+            System.out.println("p2: " + p2(ranges));
+            //System.out.println("Lowest location 2: " + seedr.stream().mapToLong(this::locationForSeed).min().orElse(0L));
 
         }
     }
@@ -133,8 +137,6 @@ public class Puzzle5 implements Puzzle {
     );
 
     private long locationForSeed(long seed) {
-
-        //long s = seed;
         for (String mapping : ORDER) {
             long finalSeed = seed;
             seed = almanacs.get(mapping)
@@ -143,10 +145,81 @@ public class Puzzle5 implements Puzzle {
                     .map(y -> y.map(finalSeed))
                     .findFirst()
                     .orElse(finalSeed);
-            //System.out.println(mapping + " --> " + seed);
         }
-
         return seed;
+    }
+
+    private long p2(Queue<Range> ranges) {
+        long value = Long.MAX_VALUE;
+
+        while (!ranges.isEmpty()) {
+            Range range = ranges.poll();
+
+            long x1 = range.getStart();
+            long x2 = range.getEnd();
+
+            if (range.getDepth() == 8) {
+                value = Math.min(value, x1);
+                continue;
+            }
+
+            // z = almanac.dest.start
+            // y1 = almanac.source.start
+            // y2 = almanac.source.end
+            // diff = almanac.dest.start - almanac.source.start
+            // x1 = range.start
+            // x2 = range.end
+
+            boolean bit = false;
+            for (Almanac almanac : almanacs.get(ORDER.get(range.getDepth() - 1))) {
+
+                long z = almanac.getDestination().getStart();
+                long y1 = almanac.getSource().getStart();
+                long y2 = almanac.getSource().getEnd();
+                long diff = z - y1;
+
+                if (x2 <= y1 || y2 <= x1) {
+                    System.out.println("no overlap");
+                    continue;
+                }
+
+                if (x1 < y1) {
+                    ranges.add(Range.builder()
+                            .start(x1)
+                            .end(y1)
+                            .depth(range.getDepth())
+                            .build());
+                    x1 = y1;
+                }
+
+                if (y2 < x2) {
+                    ranges.add(Range.builder()
+                            .start(y2)
+                            .end(x2)
+                            .depth(range.getDepth())
+                            .build());
+                    x2 = y2;
+                }
+
+                ranges.add(Range.builder()
+                        .start(x1 + diff)
+                        .end(x2 + diff)
+                        .depth(range.getDepth() + 1)
+                        .build());
+
+                bit = true;
+            }
+
+            if (!bit) {
+                ranges.add(Range.builder()
+                        .start(x1)
+                        .end(x2)
+                        .depth(range.getDepth() + 1)
+                        .build());
+            }
+
+        }
+        return value;
     }
 
     @Value
@@ -155,6 +228,11 @@ public class Puzzle5 implements Puzzle {
 
         long start;
         long end;
+        int depth;
+
+        public long size() {
+            return Math.abs(end - start);
+        }
 
         public boolean contains(final long value) {
             return value >= start && value <= end;

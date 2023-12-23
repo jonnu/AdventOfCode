@@ -187,9 +187,9 @@ public class Puzzle10 implements Puzzle {
         ANIMAL("S", "s"),
 
         VERTICAL("|", "║"),
-        HORIZONTAL("-", "═"),
+        HORIZONTAL("-", "\u2550"),
         BEND_NE("L", "╚"),
-        BEND_NW("J", "╝"),
+        BEND_NW("J", "\u255D"),
         BEND_SW("7", "╗"),
         BEND_SE("F", "╔")
         ;
