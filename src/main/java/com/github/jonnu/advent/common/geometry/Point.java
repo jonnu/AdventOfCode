@@ -1,7 +1,6 @@
 package com.github.jonnu.advent.common.geometry;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
