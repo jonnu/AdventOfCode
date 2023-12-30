@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,7 @@ public class Puzzle12 implements Puzzle {
             .collect(Collectors.joining("?"))
             // simplify: ....#.... === .#.
             // simplify: #.......# === #.#
-            .replaceAll("[.]+", ".");
+            .replaceAll("[.,]+", ".");
 
     private static final Map<String, Integer> CACHE = new HashMap<>();
 
@@ -56,6 +57,7 @@ public class Puzzle12 implements Puzzle {
                 }
 
                 String template = PART2_MAPPING.apply(matcher.group("template"));
+
                 int[] requirements = Collections.nCopies(5, Arrays.stream(matcher.group("requirement").split(","))
                                 .map(Integer::parseInt)
                                 .collect(Collectors.toList()))
@@ -79,11 +81,29 @@ public class Puzzle12 implements Puzzle {
     }
 
     private static int yuno(String template, int[] requirements) {
-        return yuno(template, requirements, 0, 0);
+        return yuno(template, requirements, 0, 0, new HashMap<>());
     }
 
-    private static int yuno(String template, int[] requirements, int atChar, int atRequirement) {
+    @Value
+    @AllArgsConstructor
+    private static class Pair<L, R> {
 
+        L left;
+        R right;
+
+        public static <L, R> Pair<L, R> of(L left, R right) {
+            return new Pair<>(left, right);
+        }
+    }
+
+    private static int yuno(String template, int[] requirements, int atChar, int atRequirement, Map<Pair<Integer, Integer>, Integer> cache) {
+
+        Pair<Integer, Integer> key = Pair.of(atChar, atRequirement);
+        if (cache.containsKey(key)) {
+            return cache.get(key);
+            //System.out.println("CACHE HIT" + key + " + " + cache.get(key));
+            //System.exit(1);
+        }
         if (CACHE.containsKey(template)) {
             return CACHE.get(template);
         }
@@ -96,7 +116,7 @@ public class Puzzle12 implements Puzzle {
         int minimum = Arrays.stream(requirements, atRequirement, requirements.length).sum();
         if (minimum > template.length() - atChar) {
             //System.out.println("NOT ENOUGH CHARS TO WIN");
-            CACHE.put(template, 0);
+            //cache.put(key, 0);//CACHE.put(template, 0);
             return 0;
         }
 
@@ -107,18 +127,21 @@ public class Puzzle12 implements Puzzle {
         if (atTemplateEnd || atRequirementEnd) {
             if (atTemplateEnd) {
                 CACHE.put(template, atRequirementEnd ? 1 : 0);
+                cache.put(key, atRequirementEnd ? 1 : 0);
                 return atRequirementEnd ? 1 : 0;
             } else {
 
                 if (template.substring(atChar).contains("#")) {
                     // reject
-                    CACHE.put(template, 0);
+                    //CACHE.put(template, 0);
+                    //cache.put(key, 0);
                     return 0;
                 }
 
                 sb.replace(atChar, sb.length(), ".".repeat(sb.length() - atChar));
-                int res = yuno(sb.toString(), requirements, sb.length(), atRequirement);
-                CACHE.put(template, res);
+                int res = yuno(sb.toString(), requirements, sb.length(), atRequirement, cache);
+                //CACHE.put(template, res);
+                //cache.put(key, res);
                 return res;
             }
 
@@ -134,15 +157,17 @@ public class Puzzle12 implements Puzzle {
                 if (canCheckDamaged) {
                     sb.setCharAt(atChar, '#');
                     String a = sb.toString();
-                    aa = yuno(a, requirements, atChar, atRequirement);
-                    CACHE.put(a, aa);
+                    aa = yuno(a, requirements, atChar, atRequirement, cache);
+                    //CACHE.put(a, aa);
+                    //cache.put(key, aa);
                 }
 
                 sb.setCharAt(atChar, '.');
                 String b = sb.toString();
-                int ab = yuno(b, requirements, atChar, atRequirement);
-                CACHE.put(b, ab);
-                return ab + ab;
+                int ab = yuno(b, requirements, atChar, atRequirement, cache);
+                //CACHE.put(b, ab);
+                //cache.put(key, ab);
+                return aa + ab;
             }
             case '#' -> {
                 // find number of concurrent #
@@ -157,14 +182,16 @@ public class Puzzle12 implements Puzzle {
                 int concurrent = x - atChar;
                 if (lookingFor == concurrent) {
                     // satisfied the requirement. go again.
-                    int res = yuno(template, requirements, atChar + concurrent, atRequirement + 1);
-                    CACHE.put(template, res);
+                    int res = yuno(template, requirements, atChar + concurrent, atRequirement + 1, cache);
+                    //CACHE.put(template, res);
+                    //cache.put(key, res);
                     return res;
                 } else if (lookingFor < concurrent) {
                     // this is an insta-fail.
                     //System.out.println("we needed " + lookingFor + " but found " + concurrent);
                     //System.out.println("Reject!");
-                    CACHE.put(template, 0);
+                    //CACHE.put(template, 0);
+                    //cache.put(key, 0);
                     return 0;
                 } else {
 
@@ -173,21 +200,24 @@ public class Puzzle12 implements Puzzle {
 
                     if (template.charAt(atChar + concurrent) == '?') {
                         sb.setCharAt(atChar + concurrent, '#');
-                        int res = yuno(sb.toString(), requirements, atChar, atRequirement);
-                        CACHE.put(sb.toString(), res);
+                        int res = yuno(sb.toString(), requirements, atChar, atRequirement, cache);
+                        //CACHE.put(sb.toString(), res);
+                        //cache.put(key, res);
                         return res;
                     } else {
                         //System.out.println("i cant get that shit in here y'all (atChar: " + atChar + "; concurrent: " + concurrent + ")");
                         //System.out.println(template);
                         //System.out.println(" ".repeat(atChar) + "^");
-                        CACHE.put(template, 0);
+                        //CACHE.put(template, 0);
+                        //cache.put(key, 0);
                         return 0;
                     }
                 }
             }
             case '.' -> {
-                int res = yuno(template, requirements, ++atChar, atRequirement);
-                CACHE.put(template, res);
+                int res = yuno(template, requirements, ++atChar, atRequirement, cache);
+                //CACHE.put(template, res);
+                //cache.put(key, res);
                 return res;
             }
             default -> throw new IllegalStateException("Unknown Character");
