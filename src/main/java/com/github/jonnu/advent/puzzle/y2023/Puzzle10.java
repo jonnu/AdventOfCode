@@ -32,7 +32,7 @@ public class Puzzle10 implements Puzzle {
     public static final String ANSI_RESET = "\u001B[0m";
 
     private static final Map<Pipe, Set<Direction>> CONNECTIONS = ImmutableMap.<Pipe, Set<Direction>>builder()
-            .put(Pipe.ANIMAL, Direction.cardinal())
+            .put(Pipe.ANIMAL, Set.copyOf(Direction.cardinal()))
             .put(Pipe.VERTICAL, Set.of(Direction.NORTH, Direction.SOUTH))
             .put(Pipe.HORIZONTAL, Set.of(Direction.WEST, Direction.EAST))
             .put(Pipe.BEND_SW, Set.of(Direction.SOUTH, Direction.WEST))

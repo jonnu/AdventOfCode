@@ -1,23 +1,28 @@
 package com.github.jonnu.advent.common.geometry;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.checkerframework.common.value.qual.IntRange;
 
 @Getter
 @AllArgsConstructor
 public enum Direction {
 
-    NORTH("N", new Point(0, -1)),
+    //
+    NORTH("N", new Point(0, -1)), // 3
     NORTHEAST("NE", new Point(1, -1)),
-    EAST("E", new Point(1, 0)),
+    EAST("E", new Point(1, 0)), // 0
     SOUTHEAST("SE", new Point(1, 1)),
-    SOUTH("S", new Point(0, 1)),
+    SOUTH("S", new Point(0, 1)), // 1
     SOUTHWEST("SW", new Point(-1, 1)),
-    WEST("W", new Point(-1, 0)),
+    WEST("W", new Point(-1, 0)), // 2
     NORTHWEST("NW", new Point(-1, -1));
 
 
@@ -84,16 +89,22 @@ public enum Direction {
         return values()[(ordinal() + 4) % values().length];
     }
 
-    public static Set<Direction> all() {
-        return Set.of(values());
+    public static List<Direction> all() {
+        return List.of(values());
     }
 
-    public static Set<Direction> cardinal() {
-        return Set.of(NORTH, EAST, SOUTH, WEST);
+    public static List<Direction> cardinal() {
+        return IntStream.range(0, values().length)
+                .filter(ordinal -> ordinal % 2 == 0)
+                .mapToObj(ordinal -> values()[ordinal])
+                .collect(Collectors.toList());
     }
 
-    public static Set<Direction> intercardinal() {
-        return Set.of(NORTHEAST, SOUTHEAST, SOUTHWEST, NORTHWEST);
+    public static List<Direction> intercardinal() {
+        return IntStream.range(0, values().length)
+                .filter(ordinal -> ordinal % 2 == 1)
+                .mapToObj(ordinal -> values()[ordinal])
+                .collect(Collectors.toList());
     }
 
     public static Direction fromString(final char character) {
