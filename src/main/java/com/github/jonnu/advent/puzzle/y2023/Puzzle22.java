@@ -61,20 +61,28 @@ public class Puzzle22 implements Puzzle {
                 line = reader.readLine();
                 i++;
             }
+            Map<Brick, Set<Point3D>> grid = bricks.stream().collect(Collectors.toMap(Function.identity(), Brick::positions));
+
+            System.out.println("Before Falling");
+            draw(grid, Axis.X);
+            draw(grid, Axis.Y);
 
             // start with lowest z.
             List<Brick> orderedBricks = bricks.stream()
                     .sorted(Comparator.comparing(Brick::base))
                     .collect(Collectors.toList());
 
+            // move.
             Set<Point3D> collisions = new HashSet<>();
             for (int j = 0; j < orderedBricks.size(); j++) {
-                collisions.addAll(bricks.get(j).drop(collisions));
+                System.out.println("Dropping " + orderedBricks.get(j).getName());
+                collisions.addAll(orderedBricks.get(j).drop(collisions));
             }
 
             //bricks.forEach(brick -> System.out.printf("Brick %s supports %s brick(s)%n.", brick.getName(), brick.supports(bricks).size()));
-            Map<Brick, Set<Point3D>> grid = bricks.stream().collect(Collectors.toMap(Function.identity(), Brick::positions));
 
+            grid = bricks.stream().collect(Collectors.toMap(Function.identity(), Brick::positions));
+            System.out.println("After Falling");
             draw(grid, Axis.X);
             draw(grid, Axis.Y);
 
@@ -86,16 +94,35 @@ public class Puzzle22 implements Puzzle {
 
             Set<Brick> safeToRemove = new HashSet<>();
             for (Brick brick : bricks) {
+
+                System.out.println("Evaluating " + brick.getName() + " [supports: " + brick.supports(bricks).stream().map(Brick::getName).collect(Collectors.joining(", "))+ "]");
+
+                // If this brick supports no others, nothing will drop, therefore it is
+                // safe to disintegrate.
                 if (brick.supports(bricks).isEmpty()) {
-                    //System.out.println("Safe to remove EMPTY " + brick.getName());
+                    System.out.println(" - " + brick.getName() + " supports no other bricks. safe to remove.");
                     safeToRemove.add(brick);
+                    continue;
                 }
+
+                boolean allSupportedBricksSupportedElsewhere = true;
                 for (Brick b : brick.supports(bricks)) {
                     // if it is supported by more than just this brick, it is safe to remove.
-                    if (!safeToRemove.contains(brick) && !Sets.difference(supported.getOrDefault(b, Set.of()), Set.of(brick)).isEmpty()) {
-                        safeToRemove.add(brick);
-                        //System.out.println("Safe to remove " + brick.getName());
-                    }
+                    // If brick 'b' (that is supported by the parent 'brick') is NOT supported by anything else,
+                    // then it is NOT safe to remove.
+                    Set<Brick> difference = Sets.difference(supported.getOrDefault(b, Set.of()), Set.of(brick));
+                    allSupportedBricksSupportedElsewhere &= !difference.isEmpty();
+
+                    System.out.println(" - " + b.getName() + " is also supported by: " + difference.stream().map(Brick::getName).collect(Collectors.joining(", ")));
+                    //if (!difference.isEmpty()) {
+                    //    System.out.println("  - therefore, " + brick.getName() + " is safe to remove.");
+                    //    safeToRemove.add(brick);
+                    //}
+                }
+
+                if (allSupportedBricksSupportedElsewhere) {
+                    System.out.println("  - supported bricks all supported elsewhere. therefore, " + brick.getName() + " is safe to remove.");
+                    safeToRemove.add(brick);
                 }
             }
 
@@ -108,6 +135,7 @@ public class Puzzle22 implements Puzzle {
 //                    .peek(x -> System.out.println("Disintegrate: " + x.getName()))
 //                    .count();
 
+            safeToRemove.forEach(a -> System.out.println(a.getName() + " is safe to remove"));
             //639 too high
             System.out.println(safeToRemove.size() + " bricks can safely be disintegrated.");
         }
