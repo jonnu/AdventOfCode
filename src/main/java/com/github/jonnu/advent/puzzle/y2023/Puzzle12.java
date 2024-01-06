@@ -20,7 +20,9 @@ import com.github.jonnu.advent.common.ResourceReader;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
+import lombok.ToString;
 import lombok.Value;
 
 @AllArgsConstructor(onConstructor = @__(@Inject))
@@ -38,7 +40,7 @@ public class Puzzle12 implements Puzzle {
             // simplify: #.......# === #.#
             .replaceAll("[.,]+", ".");
 
-    private static final Map<String, Integer> CACHE = new HashMap<>();
+    //private static final Map<String, Integer> CACHE = new HashMap<>();
 
     private final ResourceReader resourceReader;
 
@@ -86,6 +88,8 @@ public class Puzzle12 implements Puzzle {
 
     @Value
     @AllArgsConstructor
+    @ToString
+    @EqualsAndHashCode
     private static class Pair<L, R> {
 
         L left;
@@ -96,17 +100,20 @@ public class Puzzle12 implements Puzzle {
         }
     }
 
-    private static int yuno(String template, int[] requirements, int atChar, int atRequirement, Map<Pair<Integer, Integer>, Integer> cache) {
+    private static final Map<Pair<String, Integer>, Integer> CACHE = new HashMap<>();
 
-        Pair<Integer, Integer> key = Pair.of(atChar, atRequirement);
-        if (cache.containsKey(key)) {
+    private static int yuno(String template, int[] requirements, int atChar, int atRequirement, Map<Pair<String, Integer>, Integer> cache) {
+
+        Pair<String, Integer> key = Pair.of(template.substring(atChar), atRequirement);
+        if (CACHE.containsKey(key)) {
+            System.out.println(key);
             return cache.get(key);
             //System.out.println("CACHE HIT" + key + " + " + cache.get(key));
             //System.exit(1);
         }
-        if (CACHE.containsKey(template)) {
-            return CACHE.get(template);
-        }
+//        if (CACHE.containsKey(template)) {
+//            return CACHE.get(template);
+//        }
 
         // check where we are at in template
         boolean atTemplateEnd = atChar == template.length();
@@ -126,7 +133,7 @@ public class Puzzle12 implements Puzzle {
 
         if (atTemplateEnd || atRequirementEnd) {
             if (atTemplateEnd) {
-                CACHE.put(template, atRequirementEnd ? 1 : 0);
+                CACHE.put(Pair.of(template, atRequirement), atRequirementEnd ? 1 : 0);
                 cache.put(key, atRequirementEnd ? 1 : 0);
                 return atRequirementEnd ? 1 : 0;
             } else {
