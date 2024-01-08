@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -73,6 +71,8 @@ public class Puzzle22 implements Puzzle {
                     .collect(Collectors.toList());
 
             // move.
+            // stupid bug #1: i wasn't using the ordered collection properly to evaluate dropping bricks.
+            // you have to start bottom-to-top otherwise bricks will "fall through each other".
             Set<Point3D> collisions = new HashSet<>();
             for (int j = 0; j < orderedBricks.size(); j++) {
                 System.out.println("Dropping " + orderedBricks.get(j).getName());
@@ -110,32 +110,27 @@ public class Puzzle22 implements Puzzle {
                     // if it is supported by more than just this brick, it is safe to remove.
                     // If brick 'b' (that is supported by the parent 'brick') is NOT supported by anything else,
                     // then it is NOT safe to remove.
+                    // @TODO this could probably just be !set.of(brick).equals(supported) [i.e. its not JUST this brick supported]
+                    // @TODO this might be quicker than doing set diff. check docs for equality vs diff.
                     Set<Brick> difference = Sets.difference(supported.getOrDefault(b, Set.of()), Set.of(brick));
                     allSupportedBricksSupportedElsewhere &= !difference.isEmpty();
 
-                    System.out.println(" - " + b.getName() + " is also supported by: " + difference.stream().map(Brick::getName).collect(Collectors.joining(", ")));
-                    //if (!difference.isEmpty()) {
-                    //    System.out.println("  - therefore, " + brick.getName() + " is safe to remove.");
-                    //    safeToRemove.add(brick);
-                    //}
+                    //System.out.println(" - " + b.getName() + " is also supported by: " + difference.stream().map(Brick::getName).collect(Collectors.joining(", ")));
                 }
 
+                // stupid bug #2 - i wasn't considering ALL bricks that another supports before removing it.
+                // as soon as one brick didn't need the support, i thought it was safe to remove. no, it has to
+                // be ALL of them. hence the bitwise operator on 116 now, which has to be AND not OR.
                 if (allSupportedBricksSupportedElsewhere) {
                     System.out.println("  - supported bricks all supported elsewhere. therefore, " + brick.getName() + " is safe to remove.");
                     safeToRemove.add(brick);
                 }
             }
 
-            supported.forEach((brick, supports) -> System.out.println(brick.getName() + " supported by: " + supports.stream().map(Brick::getName).collect(Collectors.joining(", "))));
-            bricks.forEach(b -> System.out.println(b.getName() + " supports " + b.supports(bricks).stream().map(Brick::getName).collect(Collectors.joining(", "))));
+            //supported.forEach((brick, supports) -> System.out.println(brick.getName() + " supported by: " + supports.stream().map(Brick::getName).collect(Collectors.joining(", "))));
+            //bricks.forEach(b -> System.out.println(b.getName() + " supports " + b.supports(bricks).stream().map(Brick::getName).collect(Collectors.joining(", "))));
 
-            // bricks
-//            long count = bricks.stream()
-//                    .filter(b -> b.supports(bricks).size() != 1 && supported.getOrDefault(b, Set.of()).size() == 0)
-//                    .peek(x -> System.out.println("Disintegrate: " + x.getName()))
-//                    .count();
-
-            safeToRemove.forEach(a -> System.out.println(a.getName() + " is safe to remove"));
+            //safeToRemove.forEach(a -> System.out.println(a.getName() + " is safe to remove"));
             //639 too high
             System.out.println(safeToRemove.size() + " bricks can safely be disintegrated.");
         }
