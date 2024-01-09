@@ -3,6 +3,7 @@ package com.github.jonnu.advent.puzzle.y2023;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IntSummaryStatistics;
@@ -12,6 +13,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,23 +64,22 @@ public class Puzzle17 implements Puzzle {
             final Point origin = new Point(0, 0);
             final Point destination = new Point(gridWidth -1 , row - 1);
 
-            System.out.println("Heat loss: " + solve(origin, destination));
+            //System.out.println("Heat loss: " + solve(origin, destination));
+
+            System.out.println("Ultra Heat loss: " + solve(origin, destination, 10, 4));
         }
     }
 
     private int solve(final Point origin, final Point destination) {
+        return solve(origin, destination, 3, 1);
+    }
 
-        int heatLoss = 0;
-        Queue<Path> queue = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
-        final Map<Point, Integer> costs = new HashMap<>();
-        final Map<String, Path> costs2 = new HashMap<>();
-        //Set<Point> visited = new HashSet<>();
+    private int solve(final Point origin, final Point destination, final int stackSize, final int minimumBeforeTurn) {
 
-        //RollingStack<Direction> lookBack = new RollingStack<>(3);
-        //lookBack.push(Direction.EAST);
-
-        //System.out.println("Lookback: " + lookBack);
-        //Direction currentDirection = lookBack.lastElement();
+        // should we use a heuristic here as well?
+        //Queue<Path> queue = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
+        final BiFunction<Point, Point, Integer> heuristic = (a, b) -> Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
+        Queue<Path> queue = new PriorityQueue<>(Comparator.comparingInt(path -> heuristic.apply(path.getCurrentPosition(), destination)));
 
         final int maxX = blocks.keySet().stream().mapToInt(Point::getX).max().orElse(0);
         final int maxY = blocks.keySet().stream().mapToInt(Point::getY).max().orElse(0);
@@ -86,16 +87,29 @@ public class Puzzle17 implements Puzzle {
 
         PriorityQueue<Path> p = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
 
-        queue.add(new Path(0, origin, new RollingStack<>(3), new ArrayList<>(List.of(origin))));
+        final Map<String, Path> costs = new HashMap<>();
+
+        queue.add(new Path(0, origin, new RollingStack<>(stackSize), new ArrayList<>(List.of(origin))));
         int steps = 0;
+        int minLoss = Integer.MAX_VALUE;
         while (!queue.isEmpty()) {
 
             Path currentPath = queue.poll();
             Point currentPosition = currentPath.getCurrentPosition();
 
+            // needs to have gone at least minimumBeforeTurn to complete as well.
             if (currentPosition.equals(destination)) {
-                currentPath.getVisited().add(currentPosition);
-                p.add(currentPath);
+                // only add it to the winners pool if we have homogenous n.
+                if (currentPath.getLookbackDirections().isHomogeneous(minimumBeforeTurn)) {
+                    currentPath.getVisited().add(currentPosition);
+                    p.add(currentPath);
+                    if (currentPath.getHeatLoss() < minLoss) {
+                        //System.err.println("I found a path! " + currentPath.getHeatLoss());
+                        minLoss = currentPath.getHeatLoss();
+                        //1000 too high
+                        // 820 too low.
+                    }
+                }
                 continue;
             }
 
@@ -104,30 +118,44 @@ public class Puzzle17 implements Puzzle {
             // work out possible directions.
             Set<Direction> possibleDirections = Direction.cardinal()
                     .stream()
+                    // rule: you must move in the same direction of minimumBeforeTurn before you are allowed to change direction at all.
+                    // so if number of moves in stack is below the minimum, or the last n moves are not homogeneous, then you MUST continue in the same direction [so filter down to just this direction].
+                    //.filter(d -> (currentPath.getLookbackDirections().size() < minimumBeforeTurn || !currentPath.getLookbackDirections().isHomogeneous(minimumBeforeTurn)) && (currentPath.getLookbackDirections().isEmpty() || currentPath.getLookbackDirections().peek().equals(d)))
+                    .filter(d -> currentPath.getLookbackDirections().isEmpty() || (currentPath.getLookbackDirections().peek().equals(d) || currentPath.getLookbackDirections().isHomogeneous(minimumBeforeTurn)))
                     // rule: cannot go back on itself
                     .filter(d -> currentPath.getLookbackDirections().isEmpty() || !d.equals(currentPath.getLookbackDirections().peek().opposite()))
-                    // rule: cannot go the same way three times.
+                    // rule: cannot go the same way n times [3 for part 1, and 10 for part 2].
                     .filter(d -> !(currentPath.getLookbackDirections().isFull() && currentPath.getLookbackDirections().isHomogeneous() && currentPath.getLookbackDirections().contains(d)))
                     // rule: cannot go out of bounds.
                     .filter(d -> isInBounds.test(currentPath.getCurrentPosition().move(d)))
-                    // rule: cannot (should not?) revisit a previous node.
-                    .filter(d -> !currentPath.getVisited().contains(currentPath.getCurrentPosition().move(d)))
                     .collect(Collectors.toSet());
 
             //System.out.println("+ Path: " + currentPath);
-            //System.out.println(" ? Possible: " + possibleDirections + " (Last: " + (currentPath.getLookbackDirections().isEmpty() ? "NONE" : currentPath.getLookbackDirections().peek()) + ")");
+            //System.out.println(" ? Possible: " + possibleDirections + " (Last: " + (currentPath.getLookbackDirections().isEmpty() ? "NONE" : currentPath.getLookbackDirections().peek()) + "); Homogenous(" + minimumBeforeTurn + "): " + currentPath.getLookbackDirections().isHomogeneous(minimumBeforeTurn));
 
+            /*
+            generic pathfind: bfs.
+
+            It takes a generic T start point, a end condition function itself taking another T as its parameter and returning a boolean, a neighbor finding fuction which takes a T and returns a list of them, a cost function which takes the current T and the next T and returns an int, and finally a heuristic function which takes a T and returns an int (For today, it was just returning 0 and there we no use for any kind of heuristics as far as I'm aware.
+            I also have a Seen object generalized by T which contains the current cost when seen, and the previous T which made me get to it ; and a Scored object, also generalized by T, which contains the current point in the path, the "score" of this current path, and its heuristic if any.
+            The function itself returns a result object which is generalized by the same generic T, and contains the start, the eventual end, and a Map of <T, Seen<T>. When you get the value for the end point, it should be the score, in this case the heat loss.
+            ... This comment feels like infodump. The source is here if you want to take a look:
+             */
             possibleDirections.forEach(direction -> {
 
                 Point nextPosition = currentPath.getCurrentPosition().move(direction);
-                String nextKey = String.format("%s%s%s", currentPath.getLookbackDirections().stream().skip(1).map(x -> x.name().substring(0, 1)).collect(Collectors.joining()), direction.name().substring(0, 1), nextPosition) ;
+                // todo: store this in the path.
+                String nextKey = currentPath.getLookbackDirections().stream().skip(1).map(Enum::name).collect(Collectors.joining())
+                        + direction.name()
+                        + nextPosition;
+                //String.format("%s%s%s", currentPath.getLookbackDirections().stream().skip(1).map(x -> x.name().substring(0, 1)).collect(Collectors.joining()), direction.name().substring(0, 1), nextPosition) ;
 
                 int loss = currentPath.getHeatLoss() + blocks.get(nextPosition);
                 //System.out.println("Moving from " + currentPath.getCurrentPosition() + " to " + nextPosition + " (" + direction + ") = " + loss);
                 //if (!costs.containsKey(nextPosition) || loss < costs.get(nextPosition)) {
-                if (!costs2.containsKey(nextKey) || loss < costs2.get(nextKey).getHeatLoss()) {
+                if (!costs.containsKey(nextKey) || loss < costs.get(nextKey).getHeatLoss()) {
 
-                    costs.put(nextPosition, loss);
+                    //costs.put(nextPosition, loss);
 
                     RollingStack<Direction> nextLookback = new RollingStack<>(currentPath.getLookbackDirections());
                     nextLookback.push(direction);
@@ -147,7 +175,7 @@ public class Puzzle17 implements Puzzle {
                     );
                     //System.out.println(" >> Pre Path: " + currentPath);
                     //System.out.println(" >> New Path: " + x);
-                    costs2.put(nextKey, x);
+                    costs.put(nextKey, x);
                     queue.add(x);
                     //frontier.add(new Puzzle15.Path(cost, point));
                     //movement.put(point, path.getPoint());
@@ -177,7 +205,7 @@ public class Puzzle17 implements Puzzle {
         //System.out.println(destination + ": " + costs.get(destination));
 
         Point interest = new Point(2, 1);
-        System.out.println(interest + ":" + blocks.get(interest) + ": " + costs2.get(interest));
+        System.out.println(interest + ":" + blocks.get(interest) + ": " + costs.get(interest));
 
         draw(blocks, winner.getVisited().stream().collect(Collectors.toSet()));
         //costs2.get(destination).getVisited().forEach(System.out::println);
@@ -237,7 +265,27 @@ public class Puzzle17 implements Puzzle {
         }
 
         public boolean isHomogeneous() {
-            return Sets.newHashSet(Iterators.forEnumeration(super.elements())).size() <= 1;
+            return isHomogeneous(size());
+        }
+
+        public boolean isHomogeneous(final int limit) {
+
+            final int len = size();
+            if (len <= 1 || limit <= 1) {
+                return true;
+            }
+
+            T last = get(len - 1);
+            for (int i = len - 2, j = limit - 1; i >= 0 && j > 0; i--, j--) {
+                T current = get(i);
+                //System.out.println("Len: " + len + "; J: " + j + " I: " + i + " [comparing " + current + " to " + last + "]: " + current.equals(last));
+                if (!current.equals(last)) {
+                    return false;
+                }
+                last = current;
+            }
+
+            return true;
         }
     }
 }
