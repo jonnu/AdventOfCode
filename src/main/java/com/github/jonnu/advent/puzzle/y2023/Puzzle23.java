@@ -127,6 +127,7 @@ public class Puzzle23 implements Puzzle {
 
                 // Evaluate which ways we can move here.
                 // takes 6.407 min for part 1. too slow. needs optimisation.
+                // now sub 1s. it was just because of intstatistics being called repeatedly.
                 current.current()
                         .neighbours()
                         .entrySet()

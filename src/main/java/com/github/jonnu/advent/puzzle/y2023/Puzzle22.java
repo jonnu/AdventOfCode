@@ -133,6 +133,9 @@ public class Puzzle22 implements Puzzle {
             //safeToRemove.forEach(a -> System.out.println(a.getName() + " is safe to remove"));
             //639 too high
             System.out.println(safeToRemove.size() + " bricks can safely be disintegrated.");
+
+            // part2, start with smallest Z.
+            // for each brick (node), each edge leads to another node that represents "this would fall if the root was deleted".
         }
     }
 

@@ -71,7 +71,7 @@ public class Puzzle17 implements Puzzle {
         int heatLoss = 0;
         Queue<Path> queue = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
         final Map<Point, Integer> costs = new HashMap<>();
-        final Map<Point, Path> costs2 = new HashMap<>();
+        final Map<String, Path> costs2 = new HashMap<>();
         //Set<Point> visited = new HashSet<>();
 
         //RollingStack<Direction> lookBack = new RollingStack<>(3);
@@ -80,12 +80,14 @@ public class Puzzle17 implements Puzzle {
         //System.out.println("Lookback: " + lookBack);
         //Direction currentDirection = lookBack.lastElement();
 
-        Predicate<Point> isInBounds = p -> p.getX() >= 0 && p.getX() <= blocks.keySet().stream().mapToInt(Point::getX).max().orElse(0)
-                && p.getY() >= 0 && p.getY() <= blocks.keySet().stream().mapToInt(Point::getY).max().orElse(0);
+        final int maxX = blocks.keySet().stream().mapToInt(Point::getX).max().orElse(0);
+        final int maxY = blocks.keySet().stream().mapToInt(Point::getY).max().orElse(0);
+        Predicate<Point> isInBounds = p -> p.getX() >= 0 && p.getX() <= maxX && p.getY() >= 0 && p.getY() <= maxY;
 
         PriorityQueue<Path> p = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
 
         queue.add(new Path(0, origin, new RollingStack<>(3), new ArrayList<>(List.of(origin))));
+        int steps = 0;
         while (!queue.isEmpty()) {
 
             Path currentPath = queue.poll();
@@ -108,19 +110,22 @@ public class Puzzle17 implements Puzzle {
                     .filter(d -> !(currentPath.getLookbackDirections().isFull() && currentPath.getLookbackDirections().isHomogeneous() && currentPath.getLookbackDirections().contains(d)))
                     // rule: cannot go out of bounds.
                     .filter(d -> isInBounds.test(currentPath.getCurrentPosition().move(d)))
+                    // rule: cannot (should not?) revisit a previous node.
+                    .filter(d -> !currentPath.getVisited().contains(currentPath.getCurrentPosition().move(d)))
                     .collect(Collectors.toSet());
 
-            System.out.println("+ Path: " + currentPath);
-            System.out.println(" ? Possible: " + possibleDirections + " (Last: " + (currentPath.getLookbackDirections().isEmpty() ? "NONE" : currentPath.getLookbackDirections().peek()) + ")");
+            //System.out.println("+ Path: " + currentPath);
+            //System.out.println(" ? Possible: " + possibleDirections + " (Last: " + (currentPath.getLookbackDirections().isEmpty() ? "NONE" : currentPath.getLookbackDirections().peek()) + ")");
 
             possibleDirections.forEach(direction -> {
 
                 Point nextPosition = currentPath.getCurrentPosition().move(direction);
+                String nextKey = String.format("%s%s%s", currentPath.getLookbackDirections().stream().skip(1).map(x -> x.name().substring(0, 1)).collect(Collectors.joining()), direction.name().substring(0, 1), nextPosition) ;
 
                 int loss = currentPath.getHeatLoss() + blocks.get(nextPosition);
                 //System.out.println("Moving from " + currentPath.getCurrentPosition() + " to " + nextPosition + " (" + direction + ") = " + loss);
                 //if (!costs.containsKey(nextPosition) || loss < costs.get(nextPosition)) {
-                if (!costs2.containsKey(nextPosition) || loss <= costs2.get(nextPosition).getHeatLoss()) {
+                if (!costs2.containsKey(nextKey) || loss < costs2.get(nextKey).getHeatLoss()) {
 
                     costs.put(nextPosition, loss);
 
@@ -130,9 +135,9 @@ public class Puzzle17 implements Puzzle {
                     List<Point> nextVisited = new ArrayList<>(currentPath.getVisited());
                     nextVisited.add(nextPosition);
 
-                    if (destination.equals(nextPosition)) {
-                        System.out.println("XPath:" + currentPath);
-                    }
+                    //if (destination.equals(nextPosition)) {
+                        //System.out.println("XPath:" + currentPath);
+                    //}
 
                     Path x = new Path(
                             currentPath.getHeatLoss() + blocks.get(nextPosition),
@@ -140,9 +145,9 @@ public class Puzzle17 implements Puzzle {
                             nextLookback,
                             nextVisited
                     );
-                    System.out.println(" >> Pre Path: " + currentPath);
-                    System.out.println(" >> New Path: " + x);
-                    costs2.put(nextPosition, x);
+                    //System.out.println(" >> Pre Path: " + currentPath);
+                    //System.out.println(" >> New Path: " + x);
+                    costs2.put(nextKey, x);
                     queue.add(x);
                     //frontier.add(new Puzzle15.Path(cost, point));
                     //movement.put(point, path.getPoint());
@@ -162,6 +167,7 @@ public class Puzzle17 implements Puzzle {
 //                ));
             });
 
+            steps++;
             //draw(blocks, currentPath.getVisited());
         }
 
