@@ -3,9 +3,7 @@ package com.github.jonnu.advent.puzzle.y2023;
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EmptyStackException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IntSummaryStatistics;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +21,6 @@ import com.github.jonnu.advent.common.ResourceReader;
 import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.common.geometry.Point;
 import com.github.jonnu.advent.puzzle.Puzzle;
-import com.github.jonnu.advent.puzzle.y2021.Puzzle15;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Sets;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -64,9 +59,9 @@ public class Puzzle17 implements Puzzle {
             final Point origin = new Point(0, 0);
             final Point destination = new Point(gridWidth -1 , row - 1);
 
-            //System.out.println("Heat loss: " + solve(origin, destination));
+            System.out.println("Heat loss: " + solve(origin, destination));
 
-            System.out.println("Ultra Heat loss: " + solve(origin, destination, 10, 4));
+            //System.out.println("Ultra Heat loss: " + solve(origin, destination, 10, 4));
         }
     }
 
@@ -79,7 +74,7 @@ public class Puzzle17 implements Puzzle {
         // should we use a heuristic here as well?
         //Queue<Path> queue = new PriorityQueue<>(Comparator.comparing(Path::getHeatLoss));
         final BiFunction<Point, Point, Integer> heuristic = (a, b) -> Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
-        Queue<Path> queue = new PriorityQueue<>(Comparator.comparingInt(path -> heuristic.apply(path.getCurrentPosition(), destination)));
+        Queue<Path> queue = new PriorityQueue<>(Comparator.comparingInt(path -> path.getHeatLoss() + heuristic.apply(path.getCurrentPosition(), destination)));
 
         final int maxX = blocks.keySet().stream().mapToInt(Point::getX).max().orElse(0);
         final int maxY = blocks.keySet().stream().mapToInt(Point::getY).max().orElse(0);
