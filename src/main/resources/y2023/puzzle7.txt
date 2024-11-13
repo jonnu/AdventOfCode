@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 K8KK6 75
 TAK97 148
 8345K 129
@@ -998,3 +999,10 @@ KQ97A 472
 TK2J7 116
 K6666 99
 48845 285
+=======
+32T3K 765
+T55J5 684
+KK677 28
+KTJJT 220
+QQQJA 483
+>>>>>>> Stashed changes

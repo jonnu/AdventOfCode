@@ -10,7 +10,11 @@ import com.google.inject.Injector;
 public class AdventRunner {
     public static void main(final String[] args) {
         Injector injector = Guice.createInjector(new AdventModule());
+<<<<<<< Updated upstream
         Puzzle puzzle = injector.getInstance(Puzzle2.class);
+=======
+        Puzzle puzzle = injector.getInstance(Puzzle7.class);
+>>>>>>> Stashed changes
         solve(puzzle);
     }
 
