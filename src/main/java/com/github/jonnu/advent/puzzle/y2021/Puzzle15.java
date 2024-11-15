@@ -87,7 +87,7 @@ public class Puzzle15 implements Puzzle {
                 return path;
             }
 
-            path.getPoint().cardinalNeighbours().stream().filter(inBounds).forEach(point -> {
+            path.getPoint().cardinalNeighbours().values().stream().filter(inBounds).forEach(point -> {
                 int cost = path.getRisk() + grid.get(point.getY()).get(point.getX());
                 if (!costs.containsKey(point) || cost < costs.get(point)) {
                     costs.put(point, cost);

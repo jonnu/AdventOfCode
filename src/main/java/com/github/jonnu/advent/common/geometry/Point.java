@@ -1,6 +1,7 @@
 package com.github.jonnu.advent.common.geometry;
 
-import java.util.Set;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import lombok.AllArgsConstructor;
@@ -19,18 +20,16 @@ public class Point {
         return new Point(getX() + direction.getDelta().getX(), getY() + direction.getDelta().getY());
     }
 
-    public Set<Point> neighbours() {
+    public Map<Direction, Point> neighbours() {
         return Direction.all()
                 .stream()
-                .map(this::move)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toMap(Function.identity(), this::move));
     }
 
-    public Set<Point> cardinalNeighbours() {
+    public Map<Direction, Point> cardinalNeighbours() {
         return Direction.cardinal()
                 .stream()
-                .map(this::move)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toMap(Function.identity(), this::move));
     }
 
     @Override

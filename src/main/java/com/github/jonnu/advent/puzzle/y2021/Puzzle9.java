@@ -54,6 +54,7 @@ public class Puzzle9 implements Puzzle {
             Set<Point> lowPoints = cave.entrySet().stream()
                     .filter(entry -> entry.getKey()
                             .cardinalNeighbours()
+                            .values()
                             .stream()
                             .filter(neighbour -> neighbour.getX() >= xStats.getMin() && neighbour.getX() <= xStats.getMax())
                             .filter(neighbour -> neighbour.getY() >= yStats.getMin() && neighbour.getY() <= yStats.getMax())
@@ -86,6 +87,7 @@ public class Puzzle9 implements Puzzle {
                     current.add(cave.get(point));
 
                     point.cardinalNeighbours()
+                            .values()
                             .stream()
                             .filter(neighbour -> !visited.contains(neighbour))
                             .filter(neighbour -> neighbour.getX() >= xStats.getMin() && neighbour.getX() <= xStats.getMax())

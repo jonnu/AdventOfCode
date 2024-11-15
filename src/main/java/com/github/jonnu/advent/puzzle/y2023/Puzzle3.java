@@ -79,6 +79,7 @@ public class Puzzle3 implements Puzzle {
                     .filter(component -> !Sets.intersection(component.getPoints()
                             .stream()
                             .flatMap(point -> point.neighbours()
+                                    .values()
                                     .stream()
                                     .filter(p -> withinBounds(p, 0, xMax, 0, yMax)))
                             .collect(Collectors.toSet()), symbols.keySet())
@@ -148,6 +149,7 @@ public class Puzzle3 implements Puzzle {
         public Set<Point> neighbours() {
             return Stream.concat(points.stream(), points.stream()
                     .map(Point::neighbours)
+                    .map(Map::values)
                     .flatMap(Collection::stream))
                     .collect(Collectors.toSet());
         }
