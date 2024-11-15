@@ -16,6 +16,10 @@ public class Point {
     private final int x;
     private final int y;
 
+    public double distance(final Point other) {
+        return Math.sqrt(Math.pow(getX() - other.getX(), 2) + Math.pow(getY() - other.getY(), 2));
+    }
+
     public Point move(final Direction direction) {
         return new Point(getX() + direction.getDelta().getX(), getY() + direction.getDelta().getY());
     }
