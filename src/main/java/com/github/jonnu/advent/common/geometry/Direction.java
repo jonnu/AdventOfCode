@@ -3,7 +3,6 @@ package com.github.jonnu.advent.common.geometry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -22,6 +21,12 @@ public enum Direction {
     SOUTHWEST("SW", new Point(-1, 1)),
     WEST("W", new Point(-1, 0)),
     NORTHWEST("NW", new Point(-1, -1));
+
+
+    public enum Rotation {
+        CLOCKWISE,
+        ANTICLOCKWISE
+    }
 
     @Getter
     @AllArgsConstructor
@@ -54,12 +59,23 @@ public enum Direction {
         return delta.getY() == 0;
     }
 
-    public static Set<Direction> all() {
-        return Set.of(values());
+    // @TODO - we can probably do this via ordinal enum positioning rather than being declarative.
+    public Direction rotate(final Rotation rotation) {
+        return switch (this) {
+            case NORTH -> Rotation.CLOCKWISE.equals(rotation) ? EAST : WEST;
+            case EAST -> Rotation.CLOCKWISE.equals(rotation) ? SOUTH : NORTH;
+            case SOUTH -> Rotation.CLOCKWISE.equals(rotation) ? WEST : EAST;
+            case WEST -> Rotation.CLOCKWISE.equals(rotation) ? NORTH : SOUTH;
+            default -> this;
+        };
     }
 
     public Direction opposite() {
         return values()[(ordinal() + 4) % values().length];
+    }
+
+    public static List<Direction> all() {
+        return List.of(values());
     }
 
     public static List<Direction> cardinal() {
