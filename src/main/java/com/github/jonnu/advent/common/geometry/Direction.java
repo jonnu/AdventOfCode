@@ -22,12 +22,6 @@ public enum Direction {
     WEST("W", new Point(-1, 0)),
     NORTHWEST("NW", new Point(-1, -1));
 
-
-    public enum Rotation {
-        CLOCKWISE,
-        ANTICLOCKWISE
-    }
-
     @Getter
     @AllArgsConstructor
     private enum Alias {
@@ -38,7 +32,7 @@ public enum Direction {
         RIGHT("R", Direction.EAST);
 
         private final String glyph;
-        private Direction aliasedTo;
+        private final Direction aliasedTo;
 
         private static Optional<Direction> fromString(final String string) {
             return Arrays.stream(Alias.values())

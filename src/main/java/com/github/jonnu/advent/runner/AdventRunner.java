@@ -2,7 +2,7 @@ package com.github.jonnu.advent.runner;
 
 import com.github.jonnu.advent.inject.AdventModule;
 import com.github.jonnu.advent.puzzle.Puzzle;
-import com.github.jonnu.advent.puzzle.y2024.*;
+import com.github.jonnu.advent.puzzle.y2025.*;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Guice;
 import com.google.inject.Injector;

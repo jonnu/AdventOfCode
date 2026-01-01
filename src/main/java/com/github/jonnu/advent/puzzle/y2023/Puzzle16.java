@@ -20,6 +20,7 @@ import javax.inject.Inject;
 import com.github.jonnu.advent.common.ResourceReader;
 import com.github.jonnu.advent.common.geometry.Direction;
 import com.github.jonnu.advent.common.geometry.Point;
+import com.github.jonnu.advent.common.geometry.Rotation;
 import com.github.jonnu.advent.puzzle.Puzzle;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -98,11 +99,11 @@ public class Puzzle16 implements Puzzle {
                         switch (beam.getDirection()) {
                             case EAST:
                             case WEST:
-                                beam.setDirection(beam.getDirection().rotate(Direction.Rotation.CLOCKWISE));
+                                beam.setDirection(beam.getDirection().rotate(Rotation.CLOCKWISE));
                                 break;
                             case NORTH:
                             case SOUTH:
-                                beam.setDirection(beam.getDirection().rotate(Direction.Rotation.ANTICLOCKWISE));
+                                beam.setDirection(beam.getDirection().rotate(Rotation.ANTICLOCKWISE));
                                 break;
                         }
                     }
@@ -110,11 +111,11 @@ public class Puzzle16 implements Puzzle {
                         switch (beam.getDirection()) {
                             case NORTH:
                             case SOUTH:
-                                beam.setDirection(beam.getDirection().rotate(Direction.Rotation.CLOCKWISE));
+                                beam.setDirection(beam.getDirection().rotate(Rotation.CLOCKWISE));
                                 break;
                             case EAST:
                             case WEST:
-                                beam.setDirection(beam.getDirection().rotate(Direction.Rotation.ANTICLOCKWISE));
+                                beam.setDirection(beam.getDirection().rotate(Rotation.ANTICLOCKWISE));
                                 break;
                         }
                     }
