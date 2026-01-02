@@ -106,7 +106,7 @@ public class Puzzle5 implements Puzzle {
                 return this;
             }
             T newLeft = input.left().compareTo(left) <= 0 ? input.left() : left;
-            T newRight = input.right().compareTo(right) >= 0 ? input.right : right;
+            T newRight = input.right().compareTo(right) >= 0 ? input.right() : right;
             return new Pair<>(newLeft, newRight);
         }
     }
