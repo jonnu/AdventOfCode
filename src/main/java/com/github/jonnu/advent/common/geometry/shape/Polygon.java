@@ -1,6 +1,10 @@
 package com.github.jonnu.advent.common.geometry.shape;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.github.jonnu.advent.common.geometry.Point;
 import lombok.AllArgsConstructor;
@@ -35,4 +39,41 @@ public class Polygon implements Shape2D {
         return distance;
     }
 
+    public List<Point> outline() {
+        List<Point> points = new ArrayList<>();
+        for (int a = 0, b = 1; a < vertices.size(); a++, b++) {
+            Point x = vertices.get(a);
+            Point y = vertices.get(b % vertices.size());
+
+            if (x.getX() != y.getX()) {
+                IntStream.range(Math.min(x.getX(), y.getX()), Math.max(x.getX(), y.getX()))
+                        .boxed()
+                        .map(n -> new Point(n, x.getY()))
+                        .peek(System.out::println)
+                        .forEach(points::add);
+            } else {
+                IntStream.range(Math.min(x.getY(), y.getY()), Math.max(x.getY(), y.getY()))
+                        .boxed()
+                        .map(n -> new Point(x.getX(), n))
+                        .peek(System.out::println)
+                        .forEach(points::add);
+            }
+        }
+        return points;
+    }
+
+//    public static Polygon fromCorners(final Point x, final Point y) {
+//
+//        final BiFunction<Point, Point, Integer> manhattan = (a, b) -> Math.abs(a.getX() - b.getX()) + Math.abs(a.getY() - b.getY());
+//
+//        final Point origin = new Point(0, 0);
+//        final Point tl = manhattan.apply(origin, x) < manhattan.apply(origin, y) ? x : y;
+//        final Point br = tl.equals(x) ? y : x;
+//        return new Polygon(List.of(
+//            new Point(tl.getX(), tl.getY()),
+//            new Point(br.getX(), tl.getY()),
+//            new Point(tl.getX(), br.getY()),
+//            new Point(br.getX(), br.getY())
+//        ));
+//    }
 }

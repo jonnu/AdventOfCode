@@ -36,6 +36,22 @@ public class Point {
                 .collect(Collectors.toMap(Function.identity(), this::move));
     }
 
+    public boolean liesBetween(final Point x, final Point y) {
+        int dxc = getX() - x.getX();
+        int dyc = getY() - x.getY();
+        int dxl = y.getX() - x.getX();
+        int dyl = y.getY() - x.getY();
+        int c = dxc * dyl - dyc * dxl;
+        return c == 0;
+//        dxc = currPoint.x - point1.x;
+//        dyc = currPoint.y - point1.y;
+//
+//        dxl = point2.x - point1.x;
+//        dyl = point2.y - point1.y;
+//
+//        cross = dxc * dyl - dyc * dxl;
+    }
+
     @Override
     public String toString() {
         return "(" + x + "," + y + ")";
