@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.github.jonnu.advent.common.geometry.Point;
+import com.github.jonnu.advent.puzzle.y2025.Puzzle9;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
@@ -39,6 +40,16 @@ public class Polygon implements Shape2D {
         return distance;
     }
 
+    public List<Puzzle9.Quad> lines() {
+        List<Puzzle9.Quad> quads = new ArrayList<>();
+        for (int a = 0, b = 1; a < vertices.size(); a++, b++) {
+            Point x = vertices.get(a);
+            Point y = vertices.get(b % vertices.size());
+            quads.add(new Puzzle9.Quad(x, y));
+        }
+        return quads;
+    }
+
     public List<Point> outline() {
         List<Point> points = new ArrayList<>();
         for (int a = 0, b = 1; a < vertices.size(); a++, b++) {
@@ -49,13 +60,11 @@ public class Polygon implements Shape2D {
                 IntStream.range(Math.min(x.getX(), y.getX()), Math.max(x.getX(), y.getX()))
                         .boxed()
                         .map(n -> new Point(n, x.getY()))
-                        .peek(System.out::println)
                         .forEach(points::add);
             } else {
                 IntStream.range(Math.min(x.getY(), y.getY()), Math.max(x.getY(), y.getY()))
                         .boxed()
                         .map(n -> new Point(x.getX(), n))
-                        .peek(System.out::println)
                         .forEach(points::add);
             }
         }
